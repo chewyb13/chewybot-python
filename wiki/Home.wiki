@@ -1,0 +1,5 @@
+#summary This is where you should start with the bot
+
+= Introduction =
+
+This is a python based irc bot
