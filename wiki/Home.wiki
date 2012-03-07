@@ -2,4 +2,9 @@
 
 = Introduction =
 
-This is a python based irc bot
+This is a python based IRC bot
+
+= Basic Setup =
+
+The bot on first run should setup the database for you.
+If it does not, please double check that you have the database.py file in the same folder with the bot.py file, and if it still persists, please make a issue with your OS, python version, and anything else you can think of.
