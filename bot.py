@@ -1189,6 +1189,11 @@ def commands(sock,type,user,incom,raw):
 						debug(sock,mysockets[sock])
 					else:
 						buildmsg(sock,'ERROR',user,chan,'PRIV','NOACCESS')
+				elif (incom[4].upper() == 'TESTDATA'):
+					if (loggedgetaccess(sock,user,chan,'GLOBAL') >= 7):
+						debug(sock,mysockets)
+					else:
+						buildmsg(sock,'ERROR',user,chan,'PRIV','NOACCESS')
 				elif (incom[4].upper() == 'TEST'):
 					if (loggedgetaccess(sock,user,chan,'GLOBAL') >= 7):
 
@@ -2850,6 +2855,7 @@ def loaddata():
 			del mysockets[tempsock]
 
 def doconnection(sock):
+	debug(sock,"Attempting to connect to {0}".format(mysockets[sock]['server']['servername']))
 	mysockets[sock]['lastcmd'] = ''
 	if (mysockets[sock]['server']['nickservpass'] != 'NULL'):
 			mysockets[sock]['identified'] = 'FALSE'
@@ -2868,7 +2874,7 @@ def doconnection(sock):
 	except:
 		#del mysocket[sock]
 		#del mysockets[sock]
-		blarg = 1
+		debug(sock,"Connection Attempt Failed for {0}".format(mysockets[sock]['server']['servername']))
 	
 def main ():
 	if hasattr(os, 'fork'): 
@@ -2943,8 +2949,9 @@ def attemptfork():
 		raise OSError('Could not daemonize process: {0} ({1})'.format(e.errno, e.strerror))
 			
 if __name__ == '__main__':
+	debug('NULL',"Bot is starting, loading settings, servers, and channels")
 	loaddata()
-	#debug("NULL","Time to start coding, hehe")
+	debug("NULL","Bot finished loading settings, servers, and channels. Gonna attempt to start the bot up")
 	try:
 		main()
 	except KeyboardInterrupt:
