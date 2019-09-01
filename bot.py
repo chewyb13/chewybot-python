@@ -11,9 +11,9 @@ Details about the bot
 author = "chewyb_13 @ Servers irc.chewynet.co.uk:6667 & HellRisingSun.BounceMe.Net:7202"
 helpchans = "#chewybot @ Servers irc.chewynet.co.uk:6667 & HellRisingSun.BounceMe.Net:7202"
 email = "chewyb13@gmail.com"
-bugtracker = "http://code.google.com/p/chewybot-python/issues/list"
-sourcecode = "https://chewybot-python.googlecode.com/svn/trunk/ chewybot-python-read-only"
-version = "0.1.3.9"
+bugtracker = "https://github.com/chewyb13/chewybot-python/issues"
+sourcecode = "https://github.com/chewyb13/chewybot-python.git"
+version = "0.1.3.10"
 
 """
 Please do not edit below this section

@@ -129,7 +129,6 @@ class Database(object):
 		#self.execute("INSERT INTO settings (setting, value) VALUES ({0}, {1})".format('msginterval','1'))
 		#self.execute("INSERT INTO server (servername, address, serverport, serverpass, nick, bnick, nickservpass, botoper, botoperpass, enabled) VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9})".format(install['server']['name'],install['server']['address'],install['server']['port'],install['server']['pass'],install['server']['nick'],install['server']['bnick'],install['server']['nickpass'],install['server']['botoper'],install['server']['botoperpass'],'enabled'))
 		#self.execute("INSERT INTO channels (server, channel, chanpass, chanmodes, options, enabled) VALUES ({0}, {1}, {2}, {3}, {4}, {5})".format(install['channel']['server'],install['channel']['channel'],install['channel']['chanpass'],install['channel']['chanmodes'],'NULL','enabled'))
-		#self.execute("INSERT INTO users (username, password, global, server, channel, msgtype) VALUES ({0}, {1}, {2}, {3}, {4}, {5})".format('chewyb_13','db5ae87de7c6ebd5352191a18207dc47','7','NULL','NULL','msg'))
 		#self.execute("INSERT INTO users (username, password, global, server, channel, msgtype) VALUES ({0}, {1}, {2}, {3}, {4}, {5})".format(install['user']['username'],install['user']['password'],'6','NULL','NULL','msg'))
 
 		

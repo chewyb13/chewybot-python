@@ -1,2 +1,5 @@
 *.pyc
 /database
+*.bak
+*.prj
+*.pui
