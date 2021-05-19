@@ -4,3 +4,4 @@
 *.prj
 *.pui
 test.py
+*.code-workspace
