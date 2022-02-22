@@ -1,4 +1,4 @@
-#! C:\Python3\
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 """
 ChewyBot coded by chewyb_13
@@ -3223,6 +3223,8 @@ def main ():
 
 # attemptfork is thanks to phenny irc bot (http://inamidst.com/phenny/)
 def attemptfork():
+    # pylint: disable=no-member
+    # due to a precheck to see if fork is in os and not writing in linux
     """
     Attempt to fork the process away from the main process
     """

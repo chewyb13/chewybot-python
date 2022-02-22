@@ -1,5 +1,6 @@
 *.pyc
 /database
+/.vscode
 *.bak
 *.prj
 *.pui
