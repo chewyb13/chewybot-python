@@ -10,53 +10,54 @@ for python 2.4 or earlier download pysqlite from http://pysqlite.org/
 import os
 
 #from pysqlite2 import dbapi2 as sqlite3 # if using python 2.4
-import sqlite3  # if using python 2.5 or greater
+import sqlite3 # if using python 2.5 or greater
 
 class Database(object):
     """ class to handle all python communication with a sqlite database file """
     def __init__(self, db_file="data/data.db"):
-        database_already_exists = os.path.exists(db_file)    
+        database_already_exists = os.path.exists(db_file)
         self.db = sqlite3.connect(db_file)
         if not database_already_exists:
-            self.setupDefaultData()
-        
+            self.SetupDefaultData()
+
     def select(self,sql):
         """ select records from the database """
         #print sql
-        cursor = self.db.cursor()  
+        cursor = self.db.cursor()
         cursor.execute(sql)
-        records = cursor.fetchall()
+        outrecords = cursor.fetchall()
         cursor.close()
-        return records   
-        
+        return outrecords
+
     def insert(self,sql):
         """ insert a new record to database and return the new primary key """
-        #print sql       
-        newID = 0
-        cursor = self.db.cursor()            
+        #print sql
+        newid = 0
+        cursor = self.db.cursor()
         cursor.execute(sql)
-        newID = cursor.lastrowid
+        newid = cursor.lastrowid
         self.db.commit()
         cursor.close()
-        return newID
-        
+        return newid
+
     def execute(self,sql):
         """ execute any SQL statement but no return value given """
-        #print sql 
-        cursor = self.db.cursor()  
+        #print sql
+        cursor = self.db.cursor()
         cursor.execute(sql)
         self.db.commit()
         cursor.close()
 
     def executescript(self,sql):
         """ execute any SQL statement but no return value given """
-        #print sql 
-        cursor = self.db.cursor()  
+        #print sql
+        cursor = self.db.cursor()
         cursor.executescript(sql)
         self.db.commit()
         cursor.close()
 
-    def setupDefaultData(self):
+    def SetupDefaultData(self):
+        """Basic setup of the bot database"""
         #import hashlib
         #print "Start to do the questions, lol"
         #print "Questions with * can't be 'NULL'"
@@ -132,14 +133,14 @@ class Database(object):
         #self.execute("INSERT INTO users (username, password, global, server, channel, msgtype) VALUES ({0}, {1}, {2}, {3}, {4}, {5})".format(install['user']['username'],install['user']['password'],'6','NULL','NULL','msg'))
 
         print ("Okay something is wrong here, lol")
-                            
+
 if __name__ == '__main__':
-    db = Database()
-    sql = "SELECT id, setting, value FROM Settings"
-    records = db.select(sql)
-    print (records)  
+    DB = Database()
+    SQL = "SELECT id, setting, value FROM Settings"
+    records = DB.select(SQL)
+    print (records)
     for record in records:
-        print ("%s = %s " % (record[1],record[2]))
+        print (f"{record[1]} = {record[2]} ")
 
     #sql = "UPDATE Settings SET value = '15' WHERE setting = 'slideshow_delay'"
     #sql = "DELETE FROM Settings WHERE id > 2"

@@ -6,3 +6,4 @@
 *.pui
 test.py
 *.code-workspace
+*.log

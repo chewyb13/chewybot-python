@@ -17,6 +17,7 @@ ChewyBot coded by chewyb_13
 
 import os
 import sys
+import logging
 #import subprocess
 #import sqlite3
 #import array
@@ -38,6 +39,9 @@ from database import Database
 # You can edit the location of your database here, or where you want it to be located
 DATAFILE = "./database/chewydb.db"
 
+# Please do not edit below this section
+# unless you know what you are doing
+
 # Details about the bot
 __author__ = "chewyb_13"
 __servers__ = "irc.chewynet.co.uk & HellRisingSun.BounceMe.Net:7202"
@@ -47,8 +51,15 @@ __bugtracker__ = "https://github.com/chewyb13/chewybot-python/issues"
 __sourcecode__ = "https://github.com/chewyb13/chewybot-python.git"
 __version__ = "0.1.3.10"
 
-# Please do not edit below this section
-# unless you know what you are doing
+# bot global values
+
+# Logging setup
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+logger_handle = logging.FileHandler(filename="log.log",mode="wa")
+logger_format = logging.Formatter("%(asctime)s:%(name)s:%(levelname)s:%(message)s")
+logger_handle.setFormatter(logger_format)
+logger.addHandler(logger_handle)
 
 settings = dict()
 mysockets = dict()
@@ -94,27 +105,36 @@ def mycommands(sock,imsgtype,myuser,incom,raw):
                 stripcount = stripcount - 1
                 ctcp[stripcount] = ctcp[stripcount].strip('\x01')
             if ctcp[0].upper() == 'ACTION':
-                debug(sock,"Got a Action {0}".format(ctcp[1:]))
+                debug(sock,f"Got a Action {ctcp[1:]}")
+                # debug(sock,"Got a Action {0}".format(ctcp[1:]))
             elif ctcp[0].upper() == 'VERSION':
                 if len(ctcp) >= 2:
-                    debug(sock,"Got a CTCP VERSION Response {0}".format(ctcp[1:]))
+                    debug(sock,f"Got a CTCP VERSION Response {ctcp[1:]}")
+                    # debug(sock,"Got a CTCP VERSION Response {0}".format(ctcp[1:]))
                 else:
-                    sts(sock,"NOTICE {0} :\x01VERSION Ch3wyB0t Version {1}\x01".format(myuser,__version__))
+                    sts(sock,f"NOTICE {myuser} :\x01VERSION Ch3wyB0t Version {__version__}\x01")
+                    # sts(sock,"NOTICE {0} :\x01VERSION Ch3wyB0t Version {1}\x01".format(myuser,__version__))
             elif ctcp[0].upper() == 'PING':
                 if len(ctcp) >= 2:
-                    sts(sock,"NOTICE {0} :\x01PING {1}\x01".format(myuser,ctcp[1]))
+                    sts(sock,f"NOTICE {myuser} :\x01PING {ctcp[1]}\x01")
+                    # sts(sock,"NOTICE {0} :\x01PING {1}\x01".format(myuser,ctcp[1]))
                 else:
-                    sts(sock,"NOTICE {0} :\x01PING\x01".format(myuser))
+                    sts(sock,f"NOTICE {myuser} :\x01PING\x01")
+                    # sts(sock,"NOTICE {0} :\x01PING\x01".format(myuser))
             elif ctcp[0].upper() == 'TIME':
                 if len(ctcp) >= 2:
-                    debug(sock,"Got a CTCP TIME response {0}".format(ctcp[1:]))
+                    debug(sock,f"Got a CTCP TIME response {ctcp[1:]}")
+                    # debug(sock,"Got a CTCP TIME response {0}".format(ctcp[1:]))
                 else:
                     currenttime = datetime.datetime.now()
-                    sts(sock,"NOTICE {0} :\x01TIME {1}\x01".format(myuser,currenttime.strftime("%a %b %d %I:%M:%S%p %Y")))
+                    sts(sock,f"NOTICE {myuser} :\x01TIME {currenttime.strftime('%a %b %d %I:%M:%S%p %Y')}\x01")
+                    # sts(sock,"NOTICE {0} :\x01TIME {1}\x01".format(myuser,currenttime.strftime("%a %b %d %I:%M:%S%p %Y")))
             else:
-                debug(sock,"Got a unknown CTCP request {0}".format(ctcp))
+                debug(sock,f"Got a unknown CTCP request {ctcp}")
+                # debug(sock,"Got a unknown CTCP request {0}".format(ctcp))
         elif incom[3] == '?trigger':
-            buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"Channel: {0}{2} Private Message: {1}{2}".format(settings['chancom'],settings['pvtcom'],settings['signal']))
+            buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"Channel: {settings['chancom']}{settings['signal']} Private Message: {settings['pvtcom']}{settings['signal']}")
+            # buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"Channel: {0}{2} Private Message: {1}{2}".format(settings['chancom'],settings['pvtcom'],settings['signal']))
         elif ((incom[3] == settings['chancom']+settings['signal']) and (imsgtype in ('CMSG', 'CNOTE'))) or ((incom[3] == settings['pvtcom']+settings['signal']) and (imsgtype in ('PMSG', 'PNOTE'))):
             if len(incom) >= 5:
                 if incom[4].upper() == 'EXIT':
@@ -124,29 +144,35 @@ def mycommands(sock,imsgtype,myuser,incom,raw):
                             tempsocks = mysockets.keys()
                             for tempsock in tempsocks:
                                 mysockets[tempsock]['lastcmd'] = 'EXIT'
-                                sts(tempsock,"QUIT {0}".format(output))
+                                sts(tempsock,f"QUIT {output}")
+                                # sts(tempsock,"QUIT {0}".format(output))
                         else:
                             tempsocks = mysockets.keys()
                             for tempsock in tempsocks:
                                 mysockets[tempsock]['lastcmd'] = 'EXIT'
-                                sts(tempsock,"QUIT Ch3wyB0t Version {0} Quitting".format(__version__))
+                                sts(tempsock,f"QUIT Ch3wyB0t Version {__version__} Quitting")
+                                # sts(tempsock,"QUIT Ch3wyB0t Version {0} Quitting".format(__version__))
                     else:
                         buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESS')
                 elif incom[4].upper() == 'RELOAD':
                     if loggedgetaccess(sock,myuser,chan,'GLOBAL') >= 6:
                         tempsocks = mysockets.keys()
-                        debug('NULL',"Value {0} value".format(tempsocks))
+                        debug('NULL',f"Value {tempsocks} value")
+                        # debug('NULL',"Value {0} value".format(tempsocks))
                         for tempsock in tempsocks:
                             mysockets[tempsock]['lastcmd'] = 'RELOAD'
-                            sts(tempsock,"QUIT Ch3wyB0t Version {0} Reloading".format(__version__))
+                            sts(tempsock,f"QUIT Ch3wyB0t Version {__version__} Reloading")
+                            # sts(tempsock,"QUIT Ch3wyB0t Version {0} Reloading".format(__version__))
                     else:
                         buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESS')
                 elif incom[4].upper() == 'RAW':
                     if loggedgetaccess(sock,myuser,chan,'GLOBAL') >= 7:
                         if len(incom) >= 6:
                             output = splitjoiner(raw[5:])
-                            sts(sock,"{0}".format(output))
-                            buildmsg(sock,'RAW',myuser,chan,'PRIV',"Sent {0} to Server".format(output))
+                            sts(sock,f"{output}")
+                            # sts(sock,"{0}".format(output))
+                            buildmsg(sock,'RAW',myuser,chan,'PRIV',f"Sent {output} to Server")
+                            # buildmsg(sock,'RAW',myuser,chan,'PRIV',"Sent {0} to Server".format(output))
                         else:
                             buildmsg(sock,'ERROR',myuser,chan,'PRIV',"You didn't enter what you want to send from the bot")
                     else:
@@ -156,7 +182,8 @@ def mycommands(sock,imsgtype,myuser,incom,raw):
                         if len(incom) >= 6:
                             output = splitjoiner(raw[5:])
                             db.execute(output)
-                            buildmsg(sock,'RAW',myuser,chan,'PRIV',"Sent {0} to the database".format(output))
+                            buildmsg(sock,'RAW',myuser,chan,'PRIV',f"Sent {output} to the database")
+                            # buildmsg(sock,'RAW',myuser,chan,'PRIV',"Sent {0} to the database".format(output))
                         else:
                             buildmsg(sock,'ERROR',myuser,chan,'PRIV',"You didn't enter what you want to send to the database")
                     else:
@@ -165,10 +192,12 @@ def mycommands(sock,imsgtype,myuser,incom,raw):
                     if loggedgetaccess(sock,myuser,chan,'SERVER') >= 6:
                         if len(incom) >= 6:
                             mysockets[sock]['lastcmd'] = 'QUIT'
-                            sts(sock,"QUIT {0}".format(splitjoiner(incom[5:])))
+                            sts(sock,f"QUIT {splitjoiner(incom[5:])}")
+                            # sts(sock,"QUIT {0}".format(splitjoiner(incom[5:])))
                         else:
                             mysockets[sock]['lastcmd'] = 'QUIT'
-                            sts(sock,"QUIT Ch3wyB0t Version {0} Quitting".format(__version__))
+                            sts(sock,f"QUIT Ch3wyB0t Version {__version__} Quitting")
+                            # sts(sock,"QUIT Ch3wyB0t Version {0} Quitting".format(__version__))
                     else:
                         buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESS')
                 elif incom[4].upper() == 'REHASH':
@@ -185,7 +214,8 @@ def mycommands(sock,imsgtype,myuser,incom,raw):
                                 if incom[5].upper() == 'SET':
                                     if len(incom) >= 7:
                                         if len(incom) >= 8:
-                                            sql = "UPDATE settings SET setting = '{0}', value = '{1}' WHERE setting = '{0}'".format(rtnlower(incom[6]),incom[7])
+                                            sql = f"UPDATE settings SET setting = '{rtnlower(incom[6])}', value = '{incom[7]}' WHERE setting = '{rtnlower(incom[6])}'"
+                                            # sql = "UPDATE settings SET setting = '{0}', value = '{1}' WHERE setting = '{0}'".format(rtnlower(incom[6]),incom[7])
                                             db.execute(sql)
                                             settings[rtnlower(incom[6])] = incom[7]
                                             buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"You have successfully changed {0} to {1}".format(rtnlower(incom[6]),incom[7]))
@@ -249,7 +279,10 @@ def mycommands(sock,imsgtype,myuser,incom,raw):
                                     if len(incom) >= 7:
                                         if len(incom) >= 8:
                                             if incom[7].upper() == 'SERVER':
-                                                blarg = 1
+                                                if len(incom) >= 9:
+                                                    buildmsg(sock,'NORMAL',myuser,chan,'PRIV', f"You have successfully changed CID {incom[6]} server value to {incom[8]}")
+                                                else:
+                                                    buildmsg(sock,'ERROR',myuser,chan,'PRIV', "Missing server value to change to")
                                             elif incom[7].upper() == 'CHANNEL':
                                                 blarg = 1
                                             elif incom[7].upper() == 'CHANPASS':
@@ -2712,16 +2745,19 @@ def botlog(sock,myuser,chan,text):
     """
     Bot logging to the screen
     """
-    print ("BOTLOG: {0} {1} {2} {3}".format(mysockets[sock]['server']['servername'],myuser,chan,text))
+    logger.info(f"BOTLOG: {mysockets[sock]['server']['servername']} {myuser} {chan} {text}")
+    #print ("BOTLOG: {0} {1} {2} {3}".format(mysockets[sock]['server']['servername'],myuser,chan,text))
 
 def debug(sock,text):
     """
     Debug output to the screen
     """
     if sock == 'NULL':
-        print ("DEBUG: {0}".format(text))
+        logger.debug(f"{text}")
+        #print ("DEBUG: {0}".format(text))
     else:
-        print ("DEBUG: {0} {1}".format(mysockets[sock]['server']['servername'],text))
+        logger.debug(f"{mysockets[sock]['server']['servername']} - {text}")
+        #print ("DEBUG: {0} {1}".format(mysockets[sock]['server']['servername'],text))
 
 def screenoutput(sock,mode,text):
     """
@@ -3246,6 +3282,11 @@ def attemptfork():
         #debug('NULL','Could not daemonize process: {0} ({1})'.format(e.errno, e.strerror))
 
 if __name__ == '__main__':
+    # This line of code should never really be hit, but it's here just in case
+    if sys.version_info[0] < 3:
+        debug('NULL', "Bot failing due to old python version, needs python 3.x")
+        raise Exception("Must be using Python 3")
+        sys.exit(0)
     debug('NULL',"Bot is starting, loading settings, servers, and channels")
     loaddata()
     debug("NULL","Bot finished loading settings, servers, and channels. Gonna attempt to start the bot up")
