@@ -8,20 +8,22 @@ ChewyBot coded by chewyb_13
 # Disabling these just to cut down on some stuff to possibly make it quicker
 # pylint: disable=too-many-nested-blocks
 # pylint: disable=too-many-branches
-# pylint: disable=bare-except
+# pylint: disable=too-many-arguments
 # pylint: disable=too-many-statements
 # pylint: disable=too-many-locals
-
+# pylint: enable=useless-suppression
 
 # Don't mess with the imports
 
 import os
 import sys
 import logging
+import logging.handlers
 #import subprocess
 #import sqlite3
 #import array
-from collections import deque, UserDict
+from collections import deque
+#from collections import UserDict
 import socket
 #import asyncore
 #import asynchat
@@ -37,45 +39,51 @@ from database import Database
 # You can Start Editing Settings Here
 
 # You can edit the location of your database here, or where you want it to be located
-DATAFILE = "./database/chewydb.db"
+DATAFILE: str = "./database/chewydb.db"
 
 # Please do not edit below this section
 # unless you know what you are doing
 
 # Details about the bot
-__author__ = "chewyb_13"
-__servers__ = "irc.chewynet.co.uk & HellRisingSun.BounceMe.Net:7202"
-__helpchans__ = "#chewybot"
-__email__ = "chewyb13@gmail.com"
-__bugtracker__ = "https://github.com/chewyb13/chewybot-python/issues"
-__sourcecode__ = "https://github.com/chewyb13/chewybot-python.git"
-__version__ = "0.1.3.10"
+__author__: str = "chewyb_13"
+__servers__: str = "irc.chewynet.co.uk & HellRisingSun.BounceMe.Net:7202"
+__helpchans__: str = "#chewybot"
+__email__: str = "chewyb13@gmail.com"
+__bugtracker__: str = "https://github.com/chewyb13/chewybot-python/issues"
+__sourcecode__: str = "https://github.com/chewyb13/chewybot-python.git"
+__version__: str = "0.1.3.11"
 
 # bot global values
 
 # Logging setup
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-logger_handle = logging.FileHandler(filename="log.log",mode="wa")
-logger_format = logging.Formatter("%(asctime)s:%(name)s:%(levelname)s:%(message)s")
+logger_handle = logging.FileHandler(filename="log.log",mode="a")
+#logger_handle = logging.handlers.TimedRotatingFileHandler(filename="log.log", when='midnight', interval=1, backupCount=0, encoding="utf-8")
+logger_handle.setLevel(logging.DEBUG)
+logger_chandle = logging.StreamHandler()
+logger_chandle.setLevel(logging.DEBUG)
+logger_format = logging.Formatter("{asctime}:{name}:{levelname}:{message}", style="{")
 logger_handle.setFormatter(logger_format)
+logger_chandle.setFormatter(logger_format)
 logger.addHandler(logger_handle)
+logger.addHandler(logger_chandle)
 
-settings = dict()
-mysockets = dict()
-mysocket = dict()
+settings:dict = {}
+mysockets:dict = {}
+mysocket:dict = {}
 
-tempdata = dict()
-loggedin = dict()
+tempdata:dict = {}
+loggedin:dict = {}
 
-debuginfo = dict()
+debuginfo:dict = {}
 
-globtimer = dict()
-lasttimer = dict()
-timer = dict()
-lastqueue = dict()
-queue = dict()
-db = Database(DATAFILE)
+globtimer:dict = {}
+lasttimer:dict = {}
+timer:dict = {}
+lastqueue:dict = {}
+queue:dict = {}
+db = Database(db_file=DATAFILE)
 
 """ This is the start of the code sections """
 #44 is , 124 is | 126 is ~ 37 is %
@@ -85,19 +93,28 @@ db = Database(DATAFILE)
 
 # Notice imsgtypes = 'CNOTE' = channel notice, 'PNOTE' = private notice
 # PRIVMSG imsgtypes = 'CMSG' = channel PRIVMSG, 'PMSG' = private PRIVMSGS
-def mycommands(sock,imsgtype,myuser,incom,raw):
-    """
-    Command Structure
+def mycommands(sock: int,imsgtype: str,myuser: str,incom,raw):
+    """Command Structure.
+
+    Args:
+        sock (int): The socket information for the current connection.
+
+        imsgtype (str): Incoming msgtype: CNOTE, PNOTE, CMSG, PMSG
+
+        myuser (str): The user that called the command
+
+        incom (_type_): Incoming data
+
+        raw (_type_): Incoming raw data
     """
     if imsgtype in ('CNOTE', 'CMSG'):
-        chan = rtnlower(incom[2])
+        chan:str = rtnlower(incom[2])
     else:
-        chan = 'NULL'
+        chan:str = 'NULL'
     if len(incom) >= 4:
         #debug("Enetered Private messages")
         if ((imsgtype == 'PNOTE') and (incom[0] == mysockets[sock]['connectaddress'])):
-            #debug(sock,"Snotice: {0}".format(incom))
-            blarg = 1
+            logger.debug("Snotice: %s", incom)
         elif '\x01' in incom[3]:
             ctcp = incom[3:]
             stripcount = len(ctcp)
@@ -218,7 +235,8 @@ def mycommands(sock,imsgtype,myuser,incom,raw):
                                             # sql = "UPDATE settings SET setting = '{0}', value = '{1}' WHERE setting = '{0}'".format(rtnlower(incom[6]),incom[7])
                                             db.execute(sql)
                                             settings[rtnlower(incom[6])] = incom[7]
-                                            buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"You have successfully changed {0} to {1}".format(rtnlower(incom[6]),incom[7]))
+                                            buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"You have successfully changed {rtnlower(incom[6])} to {incom[7]}")
+                                            # buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"You have successfully changed {0} to {1}".format(rtnlower(incom[6]),incom[7]))
                                         else:
                                             buildmsg(sock,'ERROR',myuser,chan,'PRIV',"Missing Setting Value")
                                     else:
@@ -227,7 +245,8 @@ def mycommands(sock,imsgtype,myuser,incom,raw):
                                     sql = "SELECT * FROM settings"
                                     records = db.select(sql)
                                     for record in records:
-                                        buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"Setting: {0} Value: {1}".format(record[1], record[2]))
+                                        buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"Setting: {record[1]} Value: {record[2]}")
+                                        # buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"Setting: {0} Value: {1}".format(record[1], record[2]))
                                 else:
                                     buildmsg(sock,'ERROR',myuser,chan,'PRIV',"Error, Use Either Set or List")
                             else:
@@ -241,9 +260,9 @@ def mycommands(sock,imsgtype,myuser,incom,raw):
                         if loggedgetaccess(sock,myuser,chan,'GLOBAL') >= 6:
                             if len(incom) >= 6:
                                 if incom[5].upper() == 'ADD':
-                                    blarg = 1
+                                    logger.debug("Server Add Section called")
                                 elif incom[5].upper() == 'CHG':
-                                    blarg = 1
+                                    logger.debug("Server CHG called")
                                     #if (len(incom) >= 7):
                                         #if (len(incom) >= 8):
                                             #sql = "UPDATE settings SET setting = '{0}', value = '{1}' WHERE setting = '{0}'".format(rtnlower(incom[6]),incom[7])
@@ -259,9 +278,11 @@ def mycommands(sock,imsgtype,myuser,incom,raw):
                                     records = db.select(sql)
                                     for record in records:
                                         if record[10] == 'enabled':
-                                            buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"\x033SID: {0} Server: {1} Address: {2} Port: {3} SPass: {4} Nick: {5} BNick: {6} NSPass: {7} BotOper: {8} BotOperPass: {9}\x03".format(int(record[0]),record[1],record[2],int(record[3]),record[4],record[5],record[6],record[7],record[8],record[9]))
+                                            buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"\x033SID: {int(record[0])} Server: {record[1]} Address: {record[2]} Port: {int(record[3])} SPass: {record[4]} Nick: {record[5]} BNick: {record[6]} NSPass: {record[7]} BotOper: {record[8]} BotOperPass: {record[9]}\x03")
+                                            # buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"\x033SID: {0} Server: {1} Address: {2} Port: {3} SPass: {4} Nick: {5} BNick: {6} NSPass: {7} BotOper: {8} BotOperPass: {9}\x03".format(int(record[0]),record[1],record[2],int(record[3]),record[4],record[5],record[6],record[7],record[8],record[9]))
                                         else:
-                                            buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"\x034SID: {0} Server: {1} Address: {2} Port: {3} SPass: {4} Nick: {5} BNick: {6} NSPass: {7} BotOper: {8} BotOperPass: {9}\x03".format(int(record[0]),record[1],record[2],int(record[3]),record[4],record[5],record[6],record[7],record[8],record[9]))
+                                            buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"\x034SID: {int(record[0])} Server: {record[1]} Address: {record[2]} Port: {int(record[3])} SPass: {record[4]} Nick: {record[5]} BNick: {record[6]} NSPass: {record[7]} BotOper: {record[8]} BotOperPass: {record[9]}\x03")
+                                            # buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"\x034SID: {0} Server: {1} Address: {2} Port: {3} SPass: {4} Nick: {5} BNick: {6} NSPass: {7} BotOper: {8} BotOperPass: {9}\x03".format(int(record[0]),record[1],record[2],int(record[3]),record[4],record[5],record[6],record[7],record[8],record[9]))
                                     buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"Color \x033Green\x03 is enabled, Color \x034Red\x03 is disabled")
                                 else:
                                     buildmsg(sock,'ERROR',myuser,chan,'PRIV',"Error, Use Either List, Add, or Chg")
@@ -284,17 +305,17 @@ def mycommands(sock,imsgtype,myuser,incom,raw):
                                                 else:
                                                     buildmsg(sock,'ERROR',myuser,chan,'PRIV', "Missing server value to change to")
                                             elif incom[7].upper() == 'CHANNEL':
-                                                blarg = 1
+                                                logger.debug("Channel CHG Channel called")
                                             elif incom[7].upper() == 'CHANPASS':
-                                                blarg = 1
+                                                logger.debug("Channel CHG ChanPass called")
                                             elif incom[7].upper() == 'CHANMODES':
-                                                blarg = 1
+                                                logger.debug("Channel CHG ChanModes called")
                                             elif incom[7].upper() == 'CHANTOPIC':
-                                                blarg = 1
+                                                logger.debug("Channel CHG ChanTopic called")
                                             elif incom[7].upper() == 'OPTIONS':
-                                                blarg = 1
+                                                logger.debug("Channel CHG Options called")
                                             elif incom[7].upper() == 'ENABLED':
-                                                blarg = 1
+                                                logger.debug("Channel CHG Enabled called")
                                             else:
                                                 buildmsg(sock,'ERROR',myuser,chan,'PRIV',"Error, You must choose from Server, Channel, Chanpass, Chanmodes, Chantopic, Options, Enabled")
                                         else:
@@ -316,11 +337,15 @@ def mycommands(sock,imsgtype,myuser,incom,raw):
                                     records = db.select(sql)
                                     for record in records:
                                         if record[7] == 'enabled':
-                                            buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"\x033CID: {0} Server: {1} Channel: {2} Pass: {3} Channel Modes: {4} Chan Options: {5}\x03".format(int(record[0]),record[1],record[2],record[3],record[4],record[6]))
-                                            buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"\x033CID: {0} Topic: {1}\x03".format(int(record[0]),record[5]))
+                                            buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"\x033CID: {int(record[0])} Server: {record[1]} Channel: {record[2]} Pass: {record[3]} Channel Modes: {record[4]} Chan Options: {record[6]}\x03")
+                                            # buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"\x033CID: {0} Server: {1} Channel: {2} Pass: {3} Channel Modes: {4} Chan Options: {5}\x03".format(int(record[0]),record[1],record[2],record[3],record[4],record[6]))
+                                            buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"\x033CID: {int(record[0])} Topic: {record[5]}\x03")
+                                            # buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"\x033CID: {0} Topic: {1}\x03".format(int(record[0]),record[5]))
                                         else:
-                                            buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"\x034CID: {0} Server: {1} Channel: {2} Pass: {3} Channel Modes: {4} Chan Options: {5}\x03".format(int(record[0]),record[1],record[2],record[3],record[4],record[6]))
-                                            buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"\x034CID: {0} Topic: {1}\x03".format(int(record[0]),record[5]))
+                                            buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"\x034CID: {int(record[0])} Server: {record[1]} Channel: {record[2]} Pass: {record[3]} Channel Modes: {record[4]} Chan Options: {record[6]}\x03")
+                                            # buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"\x034CID: {0} Server: {1} Channel: {2} Pass: {3} Channel Modes: {4} Chan Options: {5}\x03".format(int(record[0]),record[1],record[2],record[3],record[4],record[6]))
+                                            buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"\x034CID: {int(record[0])} Topic: {record[5]}\x03")
+                                            # buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"\x034CID: {0} Topic: {1}\x03".format(int(record[0]),record[5]))
                                     buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"Color \x033Green\x03 is enabled, Color \x034Red\x03 is disabled")
                                 else:
                                     buildmsg(sock,'ERROR',myuser,chan,'PRIV',"Error, Use Either List, or Chg")
@@ -340,9 +365,11 @@ def mycommands(sock,imsgtype,myuser,incom,raw):
                                             tmpudata = pulluser(rtnlower(incom[6]))
                                             if tmpudata == 'FALSE':
                                                 tmppass = pwmaker(incom[7])
-                                                sql = "INSERT INTO users (username, password, global, server, channel, msgtype) VALUES ('{0}', '{1}', '{2}', '{3}', '{4}', '{5}')".format(rtnlower(incom[6]),tmppass.hexdigest(),'NULL','NULL','NULL','msg')
-                                                blarg = db.insert(sql)
-                                                buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"You have successfully created '{0}' with the password '{1}'".format(rtnlower(incom[6]),incom[7]))
+                                                sql = "INSERT INTO users (username, password, global, server, channel, msgtype) VALUES ('{rtnlower(incom[6])}', '{tmppass.hexdigest()}', 'NULL', 'NULL', 'NULL', 'msg')"
+                                                # sql = "INSERT INTO users (username, password, global, server, channel, msgtype) VALUES ('{0}', '{1}', '{2}', '{3}', '{4}', '{5}')".format(rtnlower(incom[6]),tmppass.hexdigest(),'NULL','NULL','NULL','msg')
+                                                db.insert(sql)
+                                                buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"You have successfully created '{rtnlower(incom[6])}' with the password '{incom[7]}'")
+                                                # buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"You have successfully created '{0}' with the password '{1}'".format(rtnlower(incom[6]),incom[7]))
                                             else:
                                                 buildmsg(sock,'ERROR',myuser,chan,'PRIV',"The username you entered already exists")
                                         else:
@@ -355,9 +382,11 @@ def mycommands(sock,imsgtype,myuser,incom,raw):
                                             if incom[7].upper() == 'PASS':
                                                 if len(incom) >= 9:
                                                     tmppass = pwmaker(incom[8])
-                                                    sql = "UPDATE users SET password = '{0}' where username = '{1}'".format(tmppass.hexdigest(),rtnlower(incom[6]))
+                                                    sql = f"UPDATE users SET password = '{tmppass.hexdigest()}' where username = '{incom[6]}'"
+                                                    # sql = "UPDATE users SET password = '{0}' where username = '{1}'".format(tmppass.hexdigest(),rtnlower(incom[6]))
                                                     db.execute(sql)
-                                                    buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"You have successfully changed the password for '{0}'".format(rtnlower(incom[6])))
+                                                    buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"You have successfully changed the password for '{rtnlower(incom[6])}'")
+                                                    # buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"You have successfully changed the password for '{0}'".format(rtnlower(incom[6])))
                                                 else:
                                                     buildmsg(sock,'ERROR',myuser,chan,'PRIV',"Error, Use format <username> PASS <newpass>")
                                             elif incom[7].upper() == 'MSGTYPE':
@@ -366,11 +395,13 @@ def mycommands(sock,imsgtype,myuser,incom,raw):
                                                         newtype = 'notice'
                                                     else:
                                                         newtype = 'msg'
-                                                    sql = "UPDATE users SET msgtype = '{0}' where username = '{1}'".format(newtype,rtnlower(incom[6]))
+                                                    sql = f"UPDATE users SET msgtype = '{newtype}' where username = '{rtnlower(incom[6])}'"
+                                                    # sql = "UPDATE users SET msgtype = '{0}' where username = '{1}'".format(newtype,rtnlower(incom[6]))
                                                     db.execute(sql)
                                                     if islogged(sock,rtnlower(incom[6])) == 'TRUE':
                                                         loggedin[sock][rtnlower(incom[6])]['msgtype'] = newtype
-                                                    buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"You have successfully changed the message type for '{0}' to '{1}'".format(rtnlower(incom[6]),newtype))
+                                                    buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"You have successfully changed the message type for '{rtnlower(incom[6])}' to '{newtype}'")
+                                                    # buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"You have successfully changed the message type for '{0}' to '{1}'".format(rtnlower(incom[6]),newtype))
                                                 else:
                                                     buildmsg(sock,'ERROR',myuser,chan,'PRIV',"Error, Use format <username> MSGTYPE <notice/msg>")
                                             else:
@@ -381,14 +412,17 @@ def mycommands(sock,imsgtype,myuser,incom,raw):
                                         buildmsg(sock,'ERROR',myuser,chan,'PRIV',"Missing Username")
                                 elif incom[5].upper() == 'DEL':
                                     #this bit of coding is only gonna be temperary for the time being due to abuse possiblities
-                                    sql = "DELETE FROM users WHERE username = '{0}'".format(rtnlower(incom[6]))
+                                    sql = f"DELETE FROM users WHERE username = '{rtnlower(incom[6])}'"
+                                    # sql = "DELETE FROM users WHERE username = '{0}'".format(rtnlower(incom[6]))
                                     db.execute(sql)
-                                    buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"Deleted {0} or attempted to delete from the database".format(rtnlower(incom[6])))
+                                    buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"Deleted {rtnlower(incom[6])} or attempted to delete from the database")
+                                    # buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"Deleted {0} or attempted to delete from the database".format(rtnlower(incom[6])))
                                 elif incom[5].upper() == 'LIST':
                                     sql = "SELECT * FROM users"
                                     records = db.select(sql)
                                     for record in records:
-                                        buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"UID: {0} Username: {1} Global: {2} Server: {3} Channel: {4} MsgType: {5}".format(int(record[0]),record[1],record[3],record[4],record[5],record[6]))
+                                        buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"UID: {int(record[0])} Username: {record[1]} Global: {record[3]} Server: {record[4]} Channel: {record[5]} MsgType: {record[6]}")
+                                        # buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"UID: {0} Username: {1} Global: {2} Server: {3} Channel: {4} MsgType: {5}".format(int(record[0]),record[1],record[3],record[4],record[5],record[6]))
                                 else:
                                     buildmsg(sock,'ERROR',myuser,chan,'PRIV',"Error, Use Either List, Add, Del, or Chg")
                             else:
@@ -398,14 +432,15 @@ def mycommands(sock,imsgtype,myuser,incom,raw):
                     else:
                         buildmsg(sock,'ERROR',myuser,chan,'PRIV',"You can not access users via channel commands")
                 elif incom[4].upper() == 'ACCESS':
-                    blarg = 1
+                    logger.debug("Channel Access called")
                 elif incom[4].upper() == 'USERLIST':
                     if loggedgetaccess(sock,myuser,chan,'SERVER') >= 4:
                         sql = "SELECT * FROM users"
                         records = db.select(sql)
                         buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"Displaying user list, only showing Usernames atm, do note may be a big ammount of infomation")
                         for record in records:
-                            buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"Username: {0}".format(record[1]))
+                            buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"Username: {record[1]}")
+                            # buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"Username: {0}".format(record[1]))
                     else:
                         buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESS')
                 elif incom[4].upper() == 'MOWNER':
@@ -1073,7 +1108,7 @@ def mycommands(sock,imsgtype,myuser,incom,raw):
                                 buildmsg(sock,'ERROR',myuser,chan,'PRIV',"You didn't enter a message")
                         if passthrough == 1:
                             if getaccess(sock,loggedin[sock][myuser]['username'],chan,'CHANNEL') >= 1:
-                                sts(sock,"PRIVMSG {0} :{1}".format(chan,splitjoiner(data)))
+                                sts(sock,f"PRIVMSG {chan} :{splitjoiner(data)}")
                             else:
                                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESS')
                 elif incom[4].upper() == 'ACT':
@@ -1101,7 +1136,7 @@ def mycommands(sock,imsgtype,myuser,incom,raw):
                                 buildmsg(sock,'ERROR',myuser,chan,'PRIV',"You didn't enter a action")
                         if passthrough == 1:
                             if getaccess(sock,loggedin[sock][myuser]['username'],chan,'CHANNEL') >= 1:
-                                sts(sock,"PRIVMSG {0} :\x01ACTION {1}\x01".format(chan,splitjoiner(data)))
+                                sts(sock,f"PRIVMSG {chan} :\x01ACTION {splitjoiner(data)}\x01")
                             else:
                                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESS')
                 elif incom[4].upper() == 'ACCOUNT':
@@ -1115,7 +1150,7 @@ def mycommands(sock,imsgtype,myuser,incom,raw):
                                             tmppass = pwmaker(incom[6])
                                             if userdetails['password'] == tmppass.hexdigest():
                                                 tmppass2 = pwmaker(incom[7])
-                                                sql = "UPDATE users SET password = '{0}' where id = '{1}'".format(tmppass2.hexdigest(),userdetails['id'])
+                                                sql = f"UPDATE users SET password = '{tmppass2.hexdigest()}' where id = '{userdetails['id']}'"
                                                 db.execute(sql)
                                                 buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"You have successfully changed your password.")
                                             else:
@@ -1130,22 +1165,22 @@ def mycommands(sock,imsgtype,myuser,incom,raw):
                                             newtype = 'notice'
                                         else:
                                             newtype = 'msg'
-                                        sql = "UPDATE users SET msgtype = '{0}' where id = '{1}'".format(newtype,userdetails['id'])
+                                        sql = f"UPDATE users SET msgtype = '{newtype}' where id = '{userdetails['id']}'"
                                         db.execute(sql)
                                         loggedin[sock][myuser]['msgtype'] = newtype
-                                        buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"You have successfully changed your message type to {0}".format(newtype))
+                                        buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"You have successfully changed your message type to {newtype}")
                                     else:
                                         buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"You have to enter a Message type")
                             else:
-                                buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"Your Account Details {0}({1})".format(myuser,loggedin[sock][myuser]['username']))
-                                buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"MSGTYPE: {0}".format(loggedin[sock][myuser]['msgtype']))
+                                buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"Your Account Details {myuser}({loggedin[sock][myuser]['username']})")
+                                buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"MSGTYPE: {loggedin[sock][myuser]['msgtype']}")
                         else:
                             buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOTLOGGED')
                     else:
                         buildmsg(sock,'ERROR',myuser,chan,'PRIV',"You can not access your account via channel commands")
                 elif incom[4].upper() == 'LOGOUT':
                     if islogged(sock,myuser) == 'TRUE':
-                        buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"You have been logged out of {0}".format(loggedin[sock][myuser]['username']))
+                        buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"You have been logged out of {loggedin[sock][myuser]['username']}")
                         del loggedin[sock][myuser]
                     else:
                         buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOTLOGGED')
@@ -1159,7 +1194,7 @@ def mycommands(sock,imsgtype,myuser,incom,raw):
                                         tmppass = pwmaker(incom[6])
                                         if udata['password'] == tmppass.hexdigest():
                                             loggedin[sock][myuser] = {'username': udata['username'], 'msgtype': udata['msgtype'], 'umask': incom[0]}
-                                            buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"You have successfully logged in as {0}".format(incom[5]))
+                                            buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"You have successfully logged in as {incom[5]}")
                                         else:
                                             buildmsg(sock,'ERROR',myuser,chan,'PRIV',"You have failed to login")
                                     else:
@@ -1169,7 +1204,7 @@ def mycommands(sock,imsgtype,myuser,incom,raw):
                             else:
                                 buildmsg(sock,'ERROR',myuser,chan,'PRIV',"You are missing <username> <password>")
                         else:
-                            buildmsg(sock,'ERROR',myuser,chan,'PRIV',"You are already LOGGED In as {0}".format(loggedin[sock][myuser]['username']))
+                            buildmsg(sock,'ERROR',myuser,chan,'PRIV',f"You are already LOGGED In as {loggedin[sock][myuser]['username']}")
                     else:
                         buildmsg(sock,'ERROR',myuser,chan,'PRIV',"You can not log in via channel commands")
                 elif incom[4].upper() == 'REGISTER':
@@ -1180,10 +1215,12 @@ def mycommands(sock,imsgtype,myuser,incom,raw):
                                     tmpudata = pulluser(rtnlower(incom[5]))
                                     if tmpudata == 'FALSE':
                                         tmppass = pwmaker(incom[6])
-                                        sql = "INSERT INTO users (username, password, global, server, channel, msgtype) VALUES ('{0}', '{1}', '{2}', '{3}', '{4}', '{5}')".format(rtnlower(incom[5]),tmppass.hexdigest(),'NULL','NULL','NULL','msg')
-                                        blarg = db.insert(sql)
+                                        sql = f"INSERT INTO users (username, password, global, server, channel, msgtype) VALUES ('{rtnlower(incom[5])}', '{tmppass.hexdigest()}', 'NULL', 'NULL', 'NULL', 'msg')"
+                                        db.insert(sql)
+                                        # sql = "INSERT INTO users (username, password, global, server, channel, msgtype) VALUES ('{0}', '{1}', '{2}', '{3}', '{4}', '{5}')".format(rtnlower(incom[5]),tmppass.hexdigest(),'NULL','NULL','NULL','msg')
+                                        db.insert(sql)
                                         loggedin[sock][myuser] = {'username': rtnlower(incom[5]), 'msgtype': 'msg', 'umask': incom[0]}
-                                        buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"You have successfully registered as {0} and have been auto logged-in".format(incom[5]))
+                                        buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"You have successfully registered as {incom[5]} and have been auto logged-in")
                                     else:
                                         buildmsg(sock,'ERROR',myuser,chan,'PRIV',"The username you entered already exists")
                                 else:
@@ -1232,7 +1269,7 @@ def mycommands(sock,imsgtype,myuser,incom,raw):
                     if passthrough == 1:
                         getwhois(sock,myuser,chan,'WHOAMI','NULL')
                 elif incom[4].upper() == 'VERSION':
-                    buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"Ch3wyB0t Version {0}".format(__version__))
+                    buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"Ch3wyB0t Version {__version__}")
                 elif incom[4].upper() == 'TESTCMD':
                     if loggedgetaccess(sock,myuser,chan,'GLOBAL') >= 7:
                         debug(sock,mysockets[sock])
@@ -1247,15 +1284,15 @@ def mycommands(sock,imsgtype,myuser,incom,raw):
                     if loggedgetaccess(sock,myuser,chan,'GLOBAL') >= 7:
 
                         #sts(sock,"MODE :{0}".format(mysockets[sock]['nick']))
-                        buildmsg(sock,'ERROR',myuser,chan,'PRIV',"data {0}".format('blarg'))
+                        buildmsg(sock,'ERROR',myuser,chan,'PRIV',"data 'blarg'")
                     else:
                         buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESS')
                 else:
                     debug(sock,incom)
                     if imsgtype in ('CMSG', 'CNOTE'):
-                        buildmsg(sock,'ERROR',myuser,chan,'CHAN',"The command {0} doesn't exist at the momment".format(incom[4]))
+                        buildmsg(sock,'ERROR',myuser,chan,'CHAN',f"The command {incom[4]} doesn't exist at the momment")
                     if imsgtype in ('PMSG', 'PNOTE'):
-                        buildmsg(sock,'ERROR',myuser,chan,'PRIV',"The command {0} doesn't exist at the momment".format(incom[4]))
+                        buildmsg(sock,'ERROR',myuser,chan,'PRIV',f"The command {incom[4]} doesn't exist at the momment")
         else:
             if imsgtype == 'PNOTE':
                 if myuser == 'NickServ':
@@ -1266,7 +1303,7 @@ def mycommands(sock,imsgtype,myuser,incom,raw):
                         elif (incom[6] == 'NickServ') and (incom[7] == 'IDENTIFY'):
                             if (mysockets[sock]['server']['nickservpass'] != 'NULL') and (mysockets[sock]['nickserv'] == '1ST'):
                                 del mysockets[sock]['nickserv']
-                                sts(sock,"PRIVMSG NickServ :IDENTIFY {0}".format(mysockets[sock]['server']['nickservpass']))
+                                sts(sock,f"PRIVMSG NickServ :IDENTIFY {mysockets[sock]['server']['nickservpass']}")
                                 mysockets[sock]['identified'] = 'TRUE'
                                 autojoinchannels(sock)
                 else:
@@ -1283,9 +1320,9 @@ def helpcmd(sock,myuser,chan,incom):
     """
     Help command
     """
-    buildmsg(sock,'HELP',myuser,chan,'PRIV',"{0} help system".format(settings['botname']))
+    buildmsg(sock,'HELP',myuser,chan,'PRIV',f"{settings['botname']} help system")
     buildmsg(sock,'HELP',myuser,chan,'PRIV',"If you need help on a certain command go help <command>")
-    buildmsg(sock,'HELP',myuser,chan,'PRIV',"{0}{3} = CHAN, {2}{3} = DCC, {1}{3} = MSG".format(settings['chancom'],settings['pvtcom'],settings['dcccom'],settings['signal']))
+    buildmsg(sock,'HELP',myuser,chan,'PRIV',f"{settings['chancom']}{settings['signal']} = CHAN, {settings['dcccom']}{settings['signal']} = DCC, {settings['pvtcom']}{settings['signal']} = MSG")
     if len(incom) >= 6:
         if chan == incom[5]:
             if len(incom) >= 7:
@@ -1303,38 +1340,38 @@ def helpcmd(sock,myuser,chan,incom):
         if hcmds[0].upper() == 'EXIT':
             if loggedgetaccess(sock,myuser,chan,'GLOBAL') >= 6:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(EXIT)- This Command will cause the bot to exit completely")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(EXIT)- Command Structure: {0}{1} exit <message>".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(EXIT)- Command Structure: {0}{1} exit <message>".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(EXIT)- Command Structure: {settings['pvtcom']}{settings['signal']} exit <message>")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(EXIT)- Command Structure: {settings['chancom']}{settings['signal']} exit <message>")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'RAW':
             if loggedgetaccess(sock,myuser,chan,'GLOBAL') >= 7:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(RAW)- This Command is super dangerous as it will send whatever is entered into it")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(RAW)- Command Structure: {0}{1} raw <data to send>".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(RAW)- Command Structure: {0}{1} raw <data to send>".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(RAW)- Command Structure: {settings['pvtcom']}{settings['signal']} raw <data to send>")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(RAW)- Command Structure: {settings['chancom']}{settings['signal']} raw <data to send>")
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(RAW)- It is highly recommend you DO NOT use this command")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'RAWDB':
             if loggedgetaccess(sock,myuser,chan,'GLOBAL') >= 7:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(RAWDB)- This Command is super dangerous as it will send whatever is entered into it")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(RAWDB)- Command Structure: {0}{1} rawdb <data to send>".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(RAWDB)- Command Structure: {0}{1} rawdb <data to send>".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(RAWDB)- Command Structure: {settings['pvtcom']}{settings['signal']} rawdb <data to send>")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(RAWDB)- Command Structure: {settings['chancom']}{settings['signal']} rawdb <data to send>")
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(RAWDB)- It is highly recommend you DO NOT use this command")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'QUIT':
             if loggedgetaccess(sock,myuser,chan,'SERVER') >= 6:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(QUIT)- This Command will cause the bot to quit from the current network")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(QUIT)- Command Structure: {0}{1} quit <message>".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(QUIT)- Command Structure: {0}{1} quit <message>".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(QUIT)- Command Structure: {settings['pvtcom']}{settings['signal']} quit <message>")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(QUIT)- Command Structure: {settings['chancom']}{settings['signal']} quit <message>")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'REHASH':
             if loggedgetaccess(sock,myuser,chan,'GLOBAL') >= 6:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(REHASH)- This Command will cause the bot to reload from the database")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(REHASH)- Command Structure: {0}{1} rehash".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(REHASH)- Command Structure: {0}{1} rehash".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(REHASH)- Command Structure: {settings['pvtcom']}{settings['signal']} rehash")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(REHASH)- Command Structure: {settings['chancom']}{settings['signal']} rehash")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'SETTINGS':
@@ -1342,15 +1379,15 @@ def helpcmd(sock,myuser,chan,incom):
                 if len(hcmds) >= 2:
                     if hcmds[1].upper() == 'LIST':
                         buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(SETTINGS)-(LIST)- This Command will list the values that are currently in the bots settings")
-                        buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(SETTINGS)-(LIST)- Command Structure: {0}{1} settings list".format(settings['pvtcom'],settings['signal']))
+                        buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(SETTINGS)-(LIST)- Command Structure: {settings['pvtcom']}{settings['signal']} settings list")
                     elif hcmds[1].upper() == 'SET':
                         buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(SETTINGS)-(SET)- This Command will set the value you pick and update both local and the db")
-                        buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(SETTINGS)-(SET)- Command Structure: {0}{1} settings set <setting> <value>".format(settings['pvtcom'],settings['signal']))
+                        buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(SETTINGS)-(SET)- Command Structure: {settings['pvtcom']}{settings['signal']} settings set <setting> <value>")
                     else:
-                        buildmsg(sock,'ERROR',myuser,chan,'PRIV',"-(SETTINGS)- The help topic account {0} is not in the database".format(hcmds[1]))
+                        buildmsg(sock,'ERROR',myuser,chan,'PRIV',f"-(SETTINGS)- The help topic account {hcmds[1]} is not in the database")
                 else:
                     buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(SETTINGS)- This Command deals with the bots settings")
-                    buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(SETTINGS)- Command Structure: {0}{1} settings [<list>][<set> <setting> <value>]".format(settings['pvtcom'],settings['signal']))
+                    buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(SETTINGS)- Command Structure: {settings['pvtcom']}{settings['signal']} settings [<list>][<set> <setting> <value>]")
                     buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(SETTINGS)- Topics available: list set")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
@@ -1359,225 +1396,225 @@ def helpcmd(sock,myuser,chan,incom):
         elif hcmds[0].upper() == 'MOWNER':
             if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 5:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(MOWNER)- This Command will Owner everyone in <channel>")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(MOWNER)- Command Structure: {0}{1} MOwner <channel>".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(MOWNER)- Command Structure: {0}{1} MOwner".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(MOWNER)- Command Structure: {settings['pvtcom']}{settings['signal']} MOwner <channel>")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(MOWNER)- Command Structure: {settings['chancom']}{settings['signal']} MOwner")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'OWNER':
             if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 5:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(OWNER)- This Command will Owner the <nicks> you pick on <channel>")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(OWNER)- Command Structure: {0}{1} Owner <channel> <nick> [<nick> [<nick>]]".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(OWNER)- Command Structure: {0}{1} Owner <nick> [<nick> [<nick>]]".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(OWNER)- Command Structure: {settings['pvtcom']}{settings['signal']} Owner <channel> <nick> [<nick> [<nick>]]")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(OWNER)- Command Structure: {settings['chancom']}{settings['signal']} Owner <nick> [<nick> [<nick>]]")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'MDEOWNER':
             if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 5:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(MDEOWNER)- This Command will DeOwner everyone in <channel> but the bot and you")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(MDEOWNER)- Command Structure: {0}{1} MDeOwner <channel>".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(MDEOWNER)- Command Structure: {0}{1} MDeOwner".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(MDEOWNER)- Command Structure: {settings['pvtcom']}{settings['signal']} MDeOwner <channel>")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(MDEOWNER)- Command Structure: {settings['chancom']}{settings['signal']} MDeOwner")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'DEOWNER':
             if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 5:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(DEOWNER)- This Command will de-Owner the <nicks> you pick on <channel>")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(DEOWNER)- Command Structure: {0}{1} DeOwner <channel> <nick> [<nick> [<nick>]]".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(DEOWNER)- Command Structure: {0}{1} DeOwner <nick> [<nick> [<nick>]]".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(DEOWNER)- Command Structure: {settings['pvtcom']}{settings['signal']} DeOwner <channel> <nick> [<nick> [<nick>]]")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(DEOWNER)- Command Structure: {settings['chancom']}{settings['signal']} DeOwner <nick> [<nick> [<nick>]]")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'OWNERME':
             if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 5:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(OWNERME)- This Command will Owner yourself on <channel>")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(OWNERME)- Command Structure: {0}{1} OwnerMe <channel>".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(OWNERME)- Command Structure: {0}{1} OwnerMe".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(OWNERME)- Command Structure: {settings['pvtcom']}{settings['signal']} OwnerMe <channel>")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(OWNERME)- Command Structure: {settings['chancom']}{settings['signal']} OwnerMe")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'DEOWNERME':
             if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 5:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(DEOWNERME)- This Command will de-Owner yourself on <channel>")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(DEOWNERME)- Command Structure: {0}{1} DeOwnerMe <channel>".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(DEOWNERME)- Command Structure: {0}{1} DeOwnerMe".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(DEOWNERME)- Command Structure: {settings['pvtcom']}{settings['signal']} DeOwnerMe <channel>")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(DEOWNERME)- Command Structure: {settings['chancom']}{settings['signal']} DeOwnerMe")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'MPROTECT':
             if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 5:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(MPROTECT)- This Command will Protect everyone in <channel>")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(MPROTECT)- Command Structure: {0}{1} MProtect <channel>".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(MPROTECT)- Command Structure: {0}{1} MProtect".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(MPROTECT)- Command Structure: {settings['pvtcom']}{settings['signal']} MProtect <channel>")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(MPROTECT)- Command Structure: {settings['chancom']}{settings['signal']} MProtect")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'PROTECT':
             if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 5:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(PROTECT)- This Command will Protect the <nicks> you pick on <channel>")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(PROTECT)- Command Structure: {0}{1} Protect <channel> <nick> [<nick> [<nick>]]".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(PROTECT)- Command Structure: {0}{1} Protect <nick> [<nick> [<nick>]]".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(PROTECT)- Command Structure: {settings['pvtcom']}{settings['signal']} Protect <channel> <nick> [<nick> [<nick>]]")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(PROTECT)- Command Structure: {settings['chancom']}{settings['signal']} Protect <nick> [<nick> [<nick>]]")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'MDEPROTECT':
             if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 5:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(MDEPROTECT)- This Command will DeProtect everyone in <channel> but the bot and you")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(MDEPROTECT)- Command Structure: {0}{1} MDeProtect <channel>".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(MDEPROTECT)- Command Structure: {0}{1} MDeProtect".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(MDEPROTECT)- Command Structure: {settings['pvtcom']}{settings['signal']} MDeProtect <channel>")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(MDEPROTECT)- Command Structure: {settings['chancom']}{settings['signal']} MDeProtect")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'DEPROTECT':
             if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 5:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(DEPROTECT)- This Command will de-Protect the <nicks> you pick on <channel>")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(DEPROTECT)- Command Structure: {0}{1} DeProtect <channel> <nick> [<nick> [<nick>]]".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(DEPROTECT)- Command Structure: {0}{1} DeProtect <nick> [<nick> [<nick>]]".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(DEPROTECT)- Command Structure: {settings['pvtcom']}{settings['signal']} DeProtect <channel> <nick> [<nick> [<nick>]]")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(DEPROTECT)- Command Structure: {settings['chancom']}{settings['signal']} DeProtect <nick> [<nick> [<nick>]]")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'PROTECTME':
             if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 4:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(PROTECTME)- This Command will Protect yourself on <channel>")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(PROTECTME)- Command Structure: {0}{1} ProtectMe <channel>".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(PROTECTME)- Command Structure: {0}{1} ProtectMe".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(PROTECTME)- Command Structure: {settings['pvtcom']}{settings['signal']} ProtectMe <channel>")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(PROTECTME)- Command Structure: {settings['chancom']}{settings['signal']} ProtectMe")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'DEPROTECTME':
             if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 4:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(DEPROTECTME)- This Command will de-Protect yourself on <channel>")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(DEPROTECTME)- Command Structure: {0}{1} DeProtectMe <channel>".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(DEPROTECTME)- Command Structure: {0}{1} DeProtectMe".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(DEPROTECTME)- Command Structure: {settings['pvtcom']}{settings['signal']} DeProtectMe <channel>")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(DEPROTECTME)- Command Structure: {settings['chancom']}{settings['signal']} DeProtectMe")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'MOP':
             if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 3:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(MOP)- This Command will Op everyone in <channel>")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(MOP)- Command Structure: {0}{1} MOp <channel>".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(MOP)- Command Structure: {0}{1} MOp".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(MOP)- Command Structure: {settings['pvtcom']}{settings['signal']} MOp <channel>")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(MOP)- Command Structure: {settings['chancom']}{settings['signal']} MOp")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'OP':
             if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 3:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(OP)- This Command will Op the <nicks> you pick on <channel>")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(OP)- Command Structure: {0}{1} Op <channel> <nick> [<nick> [<nick>]]".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(OP)- Command Structure: {0}{1} Op <nick> [<nick> [<nick>]]".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(OP)- Command Structure: {settings['pvtcom']}{settings['signal']} Op <channel> <nick> [<nick> [<nick>]]")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(OP)- Command Structure: {settings['chancom']}{settings['signal']} Op <nick> [<nick> [<nick>]]")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'MDEOP':
             if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 3:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(MDEOP)- This Command will DeOp everyone in <channel> but the bot and you")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(MDEOP)- Command Structure: {0}{1} MDeOp <channel>".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(MDEOP)- Command Structure: {0}{1} MDeOp".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(MDEOP)- Command Structure: {settings['pvtcom']}{settings['signal']} MDeOp <channel>")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(MDEOP)- Command Structure: {settings['chancom']}{settings['signal']} MDeOp")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'DEOP':
             if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 3:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(DEOP)- This Command will de-Op the <nicks> you pick on <channel>")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(DEOP)- Command Structure: {0}{1} DeOp <channel> <nick> [<nick> [<nick>]]".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(DEOP)- Command Structure: {0}{1} DeOp <nick> [<nick> [<nick>]]".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(DEOP)- Command Structure: {settings['pvtcom']}{settings['signal']} DeOp <channel> <nick> [<nick> [<nick>]]")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(DEOP)- Command Structure: {settings['chancom']}{settings['signal']} DeOp <nick> [<nick> [<nick>]]")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'OPME':
             if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 3:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(OPME)- This Command will Op yourself on <channel>")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(OPME)- Command Structure: {0}{1} OpMe <channel>".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(OPME)- Command Structure: {0}{1} OpMe".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(OPME)- Command Structure: {settings['pvtcom']}{settings['signal']} OpMe <channel>")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(OPME)- Command Structure: {settings['chancom']}{settings['signal']} OpMe")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'DEOPME':
             if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 3:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(DEOPME)- This Command will de-Op yourself on <channel>")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(DEOPME)- Command Structure: {0}{1} DeOpMe <channel>".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(DEOPME)- Command Structure: {0}{1} DeOpMe".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(DEOPME)- Command Structure: {settings['pvtcom']}{settings['signal']} DeOpMe <channel>")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(DEOPME)- Command Structure: {settings['chancom']}{settings['signal']} DeOpMe")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'MHALFOP':
             if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 3:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(MHALFOP)- This Command will HalfOp everyone in <channel>")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(MHALFOP)- Command Structure: {0}{1} MHalfOp <channel>".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(MHALFOP)- Command Structure: {0}{1} MHalfOp".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(MHALFOP)- Command Structure: {settings['pvtcom']}{settings['signal']} MHalfOp <channel>")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(MHALFOP)- Command Structure: {settings['chancom']}{settings['signal']} MHalfOp")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'HALFOP':
             if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 3:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(HALFOP)- This Command will HalfOp the <nicks> you pick on <channel>")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(HALFOP)- Command Structure: {0}{1} HalfOp <channel> <nick> [<nick> [<nick>]]".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(HALFOP)- Command Structure: {0}{1} HalfOp <nick> [<nick> [<nick>]]".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(HALFOP)- Command Structure: {settings['pvtcom']}{settings['signal']} HalfOp <channel> <nick> [<nick> [<nick>]]")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(HALFOP)- Command Structure: {settings['chancom']}{settings['signal']} HalfOp <nick> [<nick> [<nick>]]")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'MDEHALFOP':
             if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 3:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(MDEHALFOP)- This Command will DeHalfOp everyone in <channel> but the bot and you")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(MDEHALFOP)- Command Structure: {0}{1} MDeHalfOp <channel>".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(MDEHALFOP)- Command Structure: {0}{1} MDeHalfOp".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(MDEHALFOP)- Command Structure: {settings['pvtcom']}{settings['signal']} MDeHalfOp <channel>")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(MDEHALFOP)- Command Structure: {settings['chancom']}{settings['signal']} MDeHalfOp")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'DEHALFOP':
             if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 3:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(DEHALFOP)- This Command will de-HalfOp the <nicks> you pick on <channel>")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(DEHALFOP)- Command Structure: {0}{1} DeHalfOp <channel> <nick> [<nick> [<nick>]]".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(DEHALFOP)- Command Structure: {0}{1} DeHalfOp <nick> [<nick> [<nick>]]".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(DEHALFOP)- Command Structure: {settings['pvtcom']}{settings['signal']} DeHalfOp <channel> <nick> [<nick> [<nick>]]")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(DEHALFOP)- Command Structure: {settings['chancom']}{settings['signal']} DeHalfOp <nick> [<nick> [<nick>]]")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'HALFOPME':
             if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 2:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(HALFOPME)- This Command will HalfOp yourself on <channel>")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(HALFOPME)- Command Structure: {0}{1} HalfOpMe <channel>".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(HALFOPME)- Command Structure: {0}{1} HalfOpMe".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(HALFOPME)- Command Structure: {settings['pvtcom']}{settings['signal']} HalfOpMe <channel>")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(HALFOPME)- Command Structure: {settings['chancom']}{settings['signal']} HalfOpMe")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'DEHALFOPME':
             if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 2:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(DEHALFOPME)- This Command will de-HalfOp yourself on <channel>")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(DEHALFOPME)- Command Structure: {0}{1} DeHalfOpMe <channel>".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(DEHALFOPME)- Command Structure: {0}{1} DeHalfOpMe".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(DEHALFOPME)- Command Structure: {settings['pvtcom']}{settings['signal']} DeHalfOpMe <channel>")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(DEHALFOPME)- Command Structure: {settings['chancom']}{settings['signal']} DeHalfOpMe")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'MVOICE':
             if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 2:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(MVOICE)- This Command will Voice everyone in <channel>")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(MVOICE)- Command Structure: {0}{1} MVoice <channel>".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(MVOICE)- Command Structure: {0}{1} MVoice".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(MVOICE)- Command Structure: {settings['pvtcom']}{settings['signal']} MVoice <channel>")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(MVOICE)- Command Structure: {settings['chancom']}{settings['signal']} MVoice")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'VOICE':
             if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 2:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(VOICE)- This Command will voice the <nicks> you pick on <channel>")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(VOICE)- Command Structure: {0}{1} Voice <channel> <nick> [<nick> [<nick>]]".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(VOICE)- Command Structure: {0}{1} Voice <nick> [<nick> [<nick>]]".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(VOICE)- Command Structure: {settings['pvtcom']}{settings['signal']} Voice <channel> <nick> [<nick> [<nick>]]")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(VOICE)- Command Structure: {settings['chancom']}{settings['signal']} Voice <nick> [<nick> [<nick>]]")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'MDEVOICE':
             if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 2:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(MDEVOICE)- This Command will DeVoice everyone in <channel> but the bot and you")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(MDEVOICE)- Command Structure: {0}{1} MDeVoice <channel>".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(MDEVOICE)- Command Structure: {0}{1} MDeVoice".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(MDEVOICE)- Command Structure: {settings['pvtcom']}{settings['signal']} MDeVoice <channel>")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(MDEVOICE)- Command Structure: {settings['chancom']}{settings['signal']} MDeVoice")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'DEVOICE':
             if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 2:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(DEVOICE)- This Command will de-voice the <nicks> you pick on <channel>")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(DEVOICE)- Command Structure: {0}{1} DeVoice <channel> <nick> [<nick> [<nick>]]".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(DEVOICE)- Command Structure: {0}{1} DeVoice <nick> [<nick> [<nick>]]".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(DEVOICE)- Command Structure: {settings['pvtcom']}{settings['signal']} DeVoice <channel> <nick> [<nick> [<nick>]]")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(DEVOICE)- Command Structure: {settings['chancom']}{settings['signal']} DeVoice <nick> [<nick> [<nick>]]")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'VOICEME':
             if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 1:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(VOICEME)- This Command will voice yourself on <channel>")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(VOICEME)- Command Structure: {0}{1} VoiceMe <channel>".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(VOICEME)- Command Structure: {0}{1} VoiceMe".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(VOICEME)- Command Structure: {settings['pvtcom']}{settings['signal']} VoiceMe <channel>")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(VOICEME)- Command Structure: {settings['chancom']}{settings['signal']} VoiceMe")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'DEVOICEME':
             if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 1:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(DEVOICEME)- This Command will de-voice yourself on <channel>")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(DEVOICEME)- Command Structure: {0}{1} DeVoiceMe <channel>".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(DEVOICEME)- Command Structure: {0}{1} DeVoiceMe".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(DEVOICEME)- Command Structure: {settings['pvtcom']}{settings['signal']} DeVoiceMe <channel>")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(DEVOICEME)- Command Structure: {settings['chancom']}{settings['signal']} DeVoiceMe")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'SAY':
             if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 1:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(SAY)- This command will cause the bot to say a message on a channel")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(SAY)- Command Structure: {0}{1} say <channel> <message>".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(SAY)- Command Structure: {0}{1} say <message>".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(SAY)- Command Structure: {settings['pvtcom']}{settings['signal']} say <channel> <message>")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(SAY)- Command Structure: {settings['chancom']}{settings['signal']} say <message>")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'ACT':
             if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 1:
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(ACT)- This command will cause the bot to do a action on a channel")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(ACT)- Command Structure: {0}{1} act <channel> <action>".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(ACT)- Command Structure: {0}{1} act <action>".format(settings['chancom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(ACT)- Command Structure: {settings['pvtcom']}{settings['signal']} act <channel> <action>")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(ACT)- Command Structure: {settings['chancom']}{settings['signal']} act <action>")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESSHELP')
         elif hcmds[0].upper() == 'ACCOUNT':
@@ -1585,54 +1622,54 @@ def helpcmd(sock,myuser,chan,incom):
                 if len(hcmds) >= 2:
                     if hcmds[1].upper() == 'CHGPASS':
                         buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(ACCOUNT)-(CHGPASS)- This Command will allow you to change your password")
-                        buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(ACCOUNT)-(CHGPASS)- Command Structure: {0}{1} account chgpass <old pass> <new pass>".format(settings['pvtcom'],settings['signal']))
+                        buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(ACCOUNT)-(CHGPASS)- Command Structure: {settings['pvtcom']}{settings['signal']} account chgpass <old pass> <new pass>")
                     elif hcmds[1].upper() == 'MSGTYPE':
                         buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(ACCOUNT)-(MSGTYPE)- This Command will allow you to change your Message Type")
-                        buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(ACCOUNT)-(MSGTYPE)- Command Structure: {0}{1} account msgtype <notice/msg>".format(settings['pvtcom'],settings['signal']))
+                        buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(ACCOUNT)-(MSGTYPE)- Command Structure: {settings['pvtcom']}{settings['signal']} account msgtype <notice/msg>")
                     else:
-                        buildmsg(sock,'ERROR',myuser,chan,'PRIV',"-(ACCOUNT)- The help topic account {0} is not in the database".format(hcmds[1]))
+                        buildmsg(sock,'ERROR',myuser,chan,'PRIV',f"-(ACCOUNT)- The help topic account {hcmds[1]} is not in the database")
                 else:
                     buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(ACCOUNT)- This Command will allow the user to do some modifications to their account")
-                    buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(ACCOUNT)- Command Structure: {0}{1} account <chgpass/msgtype>".format(settings['pvtcom'],settings['signal']))
+                    buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(ACCOUNT)- Command Structure: {settings['pvtcom']}{settings['signal']} account <chgpass/msgtype>")
                     buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(ACCOUNT)- Topics available: chgpass msgtype")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOTLOGGED')
         elif hcmds[0].upper() == 'LOGOUT':
             if islogged(sock,myuser) == 'TRUE':
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(LOGOUT)- This Command will logout from the bot, this is the only command that works with users that is allowed in channel")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(LOGOUT)- Command Structure: {0}{1} logout".format(settings['pvtcom'],settings['signal']))
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(LOGOUT)- Command Structure: {0}{1} logout".format(settings['pvtcom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(LOGOUT)- Command Structure: {settings['pvtcom']}{settings['signal']} logout")
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(LOGOUT)- Command Structure: {settings['chancom']}{settings['signal']} logout")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOTLOGGED')
         elif hcmds[0].upper() == 'LOGIN':
             if islogged(sock,myuser) == 'FALSE':
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(LOGIN)- This Command will login to the bot, should the username and password be right")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(LOGIN)- Command Structure: {0}{1} login <username> <password>".format(settings['pvtcom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(LOGIN)- Command Structure: {settings['pvtcom']}{settings['signal']} login <username> <password>")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','LOGGED')
         elif hcmds[0].upper() == 'REGISTER':
             if islogged(sock,myuser) == 'FALSE':
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(REGISTER)- This Command will register a user to the bot if that username doesn't already exists")
-                buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(REGISTER)- Command Structure: {0}{1} register <username> <password>".format(settings['pvtcom'],settings['signal']))
+                buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(REGISTER)- Command Structure: {settings['pvtcom']}{settings['signal']} register <username> <password>")
             else:
                 buildmsg(sock,'ERROR',myuser,chan,'PRIV','LOGGED')
         elif hcmds[0].upper() == 'HELP':
             buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(HELP)- This Command Displays The Help System and Certain Command information")
-            buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(HELP)- Command Structure: {0}{1} help <channel> <topic>".format(settings['pvtcom'],settings['signal']))
+            buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(HELP)- Command Structure: {settings['pvtcom']}{settings['signal']} help <channel> <topic>")
             #buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(HELP)- Command Structure: {0}{1} help <channel> <topic>".format(settings['dcccom'],settings['signal']))
-            buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(HELP)- Command Structure: {0}{1} help <topic>".format(settings['chancom'],settings['signal']))
+            buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(HELP)- Command Structure: {settings['chancom']}{settings['signal']} help <topic>".format(settings['chancom'],settings['signal']))
         elif hcmds[0].upper() == 'WHOIS':
             buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(WHOIS)- This Command will send you a whois on the <nick> you choose")
-            buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(WHOIS)- Command Structure: {0}{1} whois <channel> <nick>".format(settings['pvtcom'],settings['signal']))
+            buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(WHOIS)- Command Structure: {settings['pvtcom']}{settings['signal']} whois <channel> <nick>")
             #buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(WHOIS)- Command Structure: {0}{1} whois <channel> <nick>".format(settings['dcccom'],settings['signal']))
-            buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(WHOIS)- Command Structure: {0}{1} whois <nick>".format(settings['chancom'],settings['signal']))
+            buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(WHOIS)- Command Structure: {settings['chancom']}{settings['signal']} whois <nick>")
         elif hcmds[0].upper() == 'WHOAMI':
             buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(WHOAMI)- This Command will send you a whois on your current logged in user account")
-            buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(WHOAMI)- Command Structure: {0}{1} whoami <channel>".format(settings['pvtcom'],settings['signal']))
+            buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(WHOAMI)- Command Structure: {settings['pvtcom']}{settings['signal']} whoami <channel>")
             #buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(WHOAMI)- Command Structure: {0}{1} whoami <channel>".format(settings['dcccom'],settings['signal']))
-            buildmsg(sock,'HELP',myuser,chan,'PRIV',"-(WHOAMI)- Command Structure: {0}{1} whoami".format(settings['chancom'],settings['signal']))
+            buildmsg(sock,'HELP',myuser,chan,'PRIV',f"-(WHOAMI)- Command Structure: {settings['chancom']}{settings['signal']} whoami")
         else:
-            buildmsg(sock,'ERROR',myuser,chan,'PRIV',"The help topic {0} is not in the database".format(hcmds[0]))
+            buildmsg(sock,'ERROR',myuser,chan,'PRIV',f"The help topic {hcmds[0]} is not in the database")
     else:
         buildmsg(sock,'HELP',myuser,chan,'PRIV',"The bot has the following Commands Available")
         if islogged(sock,myuser) == 'TRUE':
@@ -1647,14 +1684,14 @@ def helpcmd(sock,myuser,chan,incom):
                 if loggedgetaccess(sock,myuser,chan,'SERVER') >= 6:
                     buildmsg(sock,'HELP',myuser,chan,'PRIV',"Quit") #Channel
                 if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 6:
-                    blarg = 1 #don't think there is gonna be any of these
+                    logger.debug("Help description, Master channel")
             if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 5:
                 #Owner Commands - 5 Global, 6 Server, 5 Channel
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"Owner Level Access (5):")
                 if loggedgetaccess(sock,myuser,chan,'GLOBAL') >= 5:
-                    blarg = 1
+                    logger.debug("Help description, Owner Global")
                 if loggedgetaccess(sock,myuser,chan,'SERVER') >= 5:
-                    blarg = 1
+                    logger.debug("Help description, Owner Server")
                 if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 5:
                     buildmsg(sock,'HELP',myuser,chan,'PRIV',"MOwner Owner MDeOwner DeOwner Ownerme DeOwnerme")
                     buildmsg(sock,'HELP',myuser,chan,'PRIV',"MProtect Protect MDeProtect DeProtect")
@@ -1662,9 +1699,9 @@ def helpcmd(sock,myuser,chan,incom):
                 #Protected Commands - 4 Global, 4 Server, 4 Channel
                 buildmsg(sock,'HELP',myuser,chan,'PRIV',"Protected Level Access (4):")
                 if loggedgetaccess(sock,myuser,chan,'GLOBAL') >= 4:
-                    blarg = 1
+                    logger.debug("Help description, Protected Global")
                 if loggedgetaccess(sock,myuser,chan,'SERVER') >= 4:
-                    blarg = 1
+                    logger.debug("Help description, Protected Server")
                 if loggedgetaccess(sock,myuser,chan,'CHANNEL') >= 4:
                     buildmsg(sock,'HELP',myuser,chan,'PRIV',"Protectme DeProtectme")
                     #Access Protectme DeProtectme
@@ -1692,17 +1729,17 @@ def helpcmd(sock,myuser,chan,incom):
         #Anyone Commands - 0 global, 0 server, 0 channel
         buildmsg(sock,'HELP',myuser,chan,'PRIV',"Anyone Can Access (0):")
         buildmsg(sock,'HELP',myuser,chan,'PRIV',"Help Whoami Whois")
-        buildmsg(sock,'HELP',myuser,chan,'PRIV',"Pvt Command: {0}{2} help <channel> <topic>, Channel Command: {1}{2} help <topic>".format(settings['pvtcom'],settings['chancom'],settings['signal']))
-    buildmsg(sock,'HELP',myuser,chan,'PRIV',"End Of {0} help system".format(settings['botname']))
+        buildmsg(sock,'HELP',myuser,chan,'PRIV',f"Pvt Command: {settings['pvtcom']}{settings['signal']} help <channel> <topic>, Channel Command: {settings['chancom']}{settings['signal']} help <topic>")
+    buildmsg(sock,'HELP',myuser,chan,'PRIV',f"End Of {settings['botname']} help system")
 
 def rawp(sock,extra):
     """
     Raw output for debugging i guess
     """
     #buildmsg(sock,'NORMAL',myuser,chan,'PRIV',output) #types are NORMAL, HELP, ERROR  mtype are PRIV, CHAN
-    debug(sock,"this is temp {0}".format(extra))
+    debug(sock,f"this is temp {extra}")
 
-def parse_data(sock,data):
+def parse_data(sock,data: str):
     """
     Parse data from the socket and send it on
     """
@@ -1725,7 +1762,7 @@ def parse_data(sock,data):
     sender = incom[0].split('!')
     sender = sender[0]
     if incom[0] == 'PING':
-        sts(sock,"PONG :{0}".format(incom[1]))
+        sts(sock,f"PONG :{incom[1]}")
         mysockets[sock]['lastping'] = time.time()
     elif incom[0] == 'ERROR':
         if (mysockets[sock]['lastcmd'] == 'QUIT') or (mysockets[sock]['lastcmd'] == 'EXIT') or (mysockets[sock]['lastcmd'] == 'RELOAD'):
@@ -1742,16 +1779,14 @@ def parse_data(sock,data):
             #debug(sock,"Numeric 001 - Welcome to server")
             mysockets[sock]['networkname'] = incom[6]
             mysockets[sock]['connectumask'] = incom[9]
-            sts(sock,"MODE {0} +B".format(mysockets[sock]['nick']))
+            sts(sock,f"MODE {mysockets[sock]['nick']} +B")
             operupcheck(sock)
             if mysockets[sock]['identified'] == 'TRUE':
                 autojoinchannels(sock)
         elif incom[1] == '002':
-            #debug(sock,"Numeric 002 - host is server and version")
-            blarg = 1
+            logger.debug("Numeric 002: %s", incom[2:])
         elif incom[1] == '003':
-            #debug(sock,"Numeric 003 - created")
-            blarg = 1
+            logger.debug("Numeric 003: %s", incom[2:])
         elif incom[1] == '004':
             #debug(sock,"Numeric 004 - server var usermode charmode")
             mysockets[sock]['connectaddress'] = incom[3]
@@ -1824,8 +1859,7 @@ def parse_data(sock,data):
         elif incom[1] == '218':
             debug(sock,"Numeric 218 - Y class ping freq maxconnect sendq")
         elif incom[1] == '219':
-            #debug(sock,"Numeric 219 - End of /stats report")
-            blarg = 1
+            logger.debug("Numeric 219: %s", incom[2:])
 
         elif incom[1] == '221':
             if incom[2] == mysockets[sock]['nick']:
@@ -1854,23 +1888,17 @@ def parse_data(sock,data):
         elif incom[1] == '249':
             debug(sock,"Numeric 249 - :info")
         elif incom[1] == '250':
-            #debug(sock,"Numeric 250 - highest connection count")
-            blarg = 1
+            logger.debug("Numeric 250: %s", incom[2:])
         elif incom[1] == '251':
-            #debug(sock,"Numeric 251 - there are x users online")
-            blarg = 1
+            logger.debug("Numeric 251: %s", incom[2:])
         elif incom[1] == '252':
-            #debug(sock,"Numeric 252 - number of operators")
-            blarg = 1
+            logger.debug("Numeric 252: %s", incom[2:])
         elif incom[1] == '253':
-            #debug(sock,"Numeric 253 - number of unknown connections")
-            blarg = 1
+            logger.debug("Numeric 253: %s", incom[2:])
         elif incom[1] == '254':
-            #debug(sock,"Numeric 254 - number of channels")
-            blarg = 1
+            logger.debug("Numeric 254: %s", incom[2:])
         elif incom[1] == '255':
-            #debug(sock,"Numeric 255 - have x clients and x servers")
-            blarg = 1
+            logger.debug("Numeric 255: %s", incom[2:])
         elif incom[1] == '256':
             debug(sock,"Numeric 256 - :Administrative info about server")
         elif incom[1] == '257':
@@ -1884,11 +1912,9 @@ def parse_data(sock,data):
             debug(sock,"Numeric 263 - :Server load is temporarily too heavy. Please wait a while and try again.")
 
         elif incom[1] == '265':
-            #debug(sock,"Numeric 265 - :Current local users: curr Max: max")
-            blarg = 1
+            logger.debug("Numeric 265: %s", incom[2:])
         elif incom[1] == '266':
-            #debug(sock,"Numeric 266 - :Current global users: curr Max: max")
-            blarg = 1
+            logger.debug("Numeric 266: %s", incom[2:])
 
         elif incom[1] == '271':
             debug(sock,"Numeric 271 - nick mask")
@@ -1958,15 +1984,15 @@ def parse_data(sock,data):
         elif incom[1] == '324':
             modeprocessor_chan(sock,rtnlower(incom[3]),incom[4:])
             if chanmodes(sock,rtnlower(incom[3])) != 'NULL':
-                sts(sock,"MODE {0} {1}".format(incom[3],chanmodes(sock,rtnlower(incom[3]))))
+                sts(sock,f"MODE {incom[3]} {chanmodes(sock,rtnlower(incom[3]))}")
 
         elif incom[1] == '328':
             debug(sock,"Numeric 328 - channel :url")
         elif incom[1] == '329':
+            logger.debug("Numeric 329: %s", incom[2:])
             #debug(sock,"Numeric 329 - Channel Creation time")
             #-1-> :chewy.chewynet.co.uk 329 ^chewy_god^ #home 1280495592
             #DEBUG: ChewyNet ['chewy.chewynet.co.uk', '329', '^chewy_god^', '#home', '1280495592']
-            blarg = 1
 
         elif incom[1] == '331':
             debug(sock,"Numeric 331 - No topic is set")
@@ -1985,23 +2011,23 @@ def parse_data(sock,data):
             #debug(sock,"Numeric 346 - Channel Invex list
             try:
                 mysockets[sock]['channels'][rtnlower(incom[3])]['INVEX']
-            except:
-                mysockets[sock]['channels'][rtnlower(incom[3])]['INVEX'] = dict()
+            except KeyError:
+                mysockets[sock]['channels'][rtnlower(incom[3])]['INVEX']:dict = {}
             mysockets[sock]['channels'][rtnlower(incom[3])]['INVEX'][incom[4]] = 'TRUE'
         elif incom[1] == '347':
+            logger.debug("Numeric 347: %s", incom[2:])
             #debug(sock,"Numeric 347 - End of Channel Invite List")
-            blarg = 1
         elif incom[1] == '348':
             #DEBUG: ChewyNet ['chewy.chewynet.co.uk', '348', '^chewy_god^', '#home', 'blond!*@*', 'chewyb_13', '1280533501']
             #debug(sock,"Numeric 348 - Channel Exception list
             try:
                 mysockets[sock]['channels'][rtnlower(incom[3])]['EXCEPT']
-            except:
-                mysockets[sock]['channels'][rtnlower(incom[3])]['EXCEPT'] = dict()
+            except KeyError:
+                mysockets[sock]['channels'][rtnlower(incom[3])]['EXCEPT']:dict = {}
             mysockets[sock]['channels'][rtnlower(incom[3])]['EXCEPT'][incom[4]] = 'TRUE'
         elif incom[1] == '349':
+            logger.debug("Numeric 349: %s", incom[2:])
             #debug(sock,"Numeric 349 - End of Channel Exception List")
-            blarg = 1
 
         elif incom[1] == '351':
             debug(sock,"Numeric 351 - version.debug server :info")
@@ -2011,8 +2037,8 @@ def parse_data(sock,data):
             #debug(sock,"Numeric 353 - Names")
             try:
                 mysockets[sock]['channels'][rtnlower(incom[4])]
-            except:
-                mysockets[sock]['channels'][rtnlower(incom[4])] = dict()
+            except KeyError:
+                mysockets[sock]['channels'][rtnlower(incom[4])]:dict = {}
             tmpdata = incom[5:]
             #debug(sock,tmpdata)
             i = 0
@@ -2021,8 +2047,8 @@ def parse_data(sock,data):
                     break
                 try:
                     mysockets[sock]['channels'][rtnlower(incom[4])]['users']
-                except:
-                    mysockets[sock]['channels'][rtnlower(incom[4])]['users'] = dict()
+                except KeyError:
+                    mysockets[sock]['channels'][rtnlower(incom[4])]['users']:dict = {}
                 if tmpdata[i][0] == '~':
                     tmpuser = tmpdata[i][1:]
                     tmpmode = 'FOP'
@@ -2043,8 +2069,8 @@ def parse_data(sock,data):
                     tmpmode = 'REGULAR'
                 try:
                     mysockets[sock]['channels'][rtnlower(incom[4])]['users'][tmpuser]
-                except:
-                    mysockets[sock]['channels'][rtnlower(incom[4])]['users'][tmpuser] = dict()
+                except KeyError:
+                    mysockets[sock]['channels'][rtnlower(incom[4])]['users'][tmpuser]:dict = {}
                 mysockets[sock]['channels'][rtnlower(incom[4])]['users'][tmpuser]['inchan'] = 'TRUE'
                 mysockets[sock]['channels'][rtnlower(incom[4])]['users'][tmpuser][tmpmode] = 'TRUE'
                 i = i + 1
@@ -2054,36 +2080,31 @@ def parse_data(sock,data):
         elif incom[1] == '365':
             debug(sock,"Numeric 365 - mask :End of /LINKS list.")
         elif incom[1] == '366':
-            #debug(sock,"Numeric 366 - End of Names")
-            blarg = 1
+            logger.debug("Numeric 366 - End of Names: %s", incom[2:])
         elif incom[1] == '367':
             #DEBUG: ChewyNet ['chewy.chewynet.co.uk', '367', '^chewy_god^', '#home', 'blarg!*@*', 'chewyb_13', '1280533501']
             #debug(sock,"Numeric 367 - Channel Ban list
             try:
                 mysockets[sock]['channels'][rtnlower(incom[3])]['BAN']
-            except:
-                mysockets[sock]['channels'][rtnlower(incom[3])]['BAN'] = dict()
+            except KeyError:
+                mysockets[sock]['channels'][rtnlower(incom[3])]['BAN']:dict = {}
             mysockets[sock]['channels'][rtnlower(incom[3])]['BAN'][incom[4]] = 'TRUE'
         elif incom[1] == '368':
-            #debug(sock,"Numeric 368 - End of Channel Ban List")
-            blarg = 1
+            logger.debug("Numeric 368 - End of Channel Ban List: %s", incom[2:])
         elif incom[1] == '369':
             debug(sock,"Numeric 369 - request :End of WHOWAS")
 
         elif incom[1] == '371':
             debug(sock,"Numeric 371 - :info")
         elif incom[1] == '372':
-            #debug(sock,"Numeric 372 - MOTD info")
-            blarg = 1
+            logger.debug("Numeric 372 - MOTD info: %s", incom[2:])
 
         elif incom[1] == '374':
             debug(sock,"Numeric 374 - :End of /INFO list.")
         elif incom[1] == '375':
-            #debug(sock,"Numeric 375 - server motd")
-            blarg = 1
+            logger.debug("Numeric 375 - server motd: %s", incom[2:])
         elif incom[1] == '376':
-            #debug(sock,"Numeric 376 - end of motd")
-            blarg = 1
+            logger.debug("Numeric 376 - end of motd: %s", incom[2:])
         elif incom[1] == '377':
             debug(sock,"Numeric 377 - info")
         elif incom[1] == '378':
@@ -2133,8 +2154,7 @@ def parse_data(sock,data):
         elif incom[1] == '421':
             debug(sock,"Numeric 421 - command :Unknown command")
         elif incom[1] == '422':
-            #debug(sock,"Numeric 422 - MOTD missing")
-            blarg = 1
+            logger.debug(sock,"Numeric 422 - MOTD missing: %s", incom[2:])
         elif incom[1] == '423':
             debug(sock,"Numeric 423 - server :No administrative info available")
 
@@ -2145,10 +2165,10 @@ def parse_data(sock,data):
         elif incom[1] == '433':
             if incom[3] == mysockets[sock]['nick']:
                 if mysockets[sock]['nick'] == mysockets[sock]['server']['nick']:
-                    sts(sock,"NICK {0}".format(mysockets[sock]['server']['bnick']))
+                    sts(sock,f"NICK {mysockets[sock]['server']['bnick']}")
                     mysockets[sock]['nick'] = mysockets[sock]['server']['bnick']
                 if mysockets[sock]['nick'] == mysockets[sock]['server']['bnick']:
-                    sts(sock,"NICK {0}".format(mysockets[sock]['server']['nick']))
+                    sts(sock,f"NICK {mysockets[sock]['server']['nick']}")
                     mysockets[sock]['nick'] = mysockets[sock]['server']['nick']
 
         elif incom[1] == '436':
@@ -2191,37 +2211,37 @@ def parse_data(sock,data):
         elif incom[1] == '471':
             #debug(sock,"Numeric 471 - channel :Cannot join channel (+l)")
             if mysockets[sock]['identified'] == 'TRUE':
-                sts(sock,"PRIVMSG ChanServ :INVITE {0}".format(incom[3]))
+                sts(sock,f"PRIVMSG ChanServ :INVITE {incom[3]}")
                 joinchan(sock,rtnlower(incom[3]))
             elif mysockets[sock]['isoper'] == 'TRUE':
-                sts(sock,"SAJOIN {0} {1}".format(mysockets[sock]['nick'],incom[3]))
+                sts(sock,f"SAJOIN {mysockets[sock]['nick']} {incom[3]}")
             else:
-                blarg = 1
+                logger.debug("Numeric 471 - channel Limit Failure: %s", incom[2:])
         elif incom[1] == '472':
             debug(sock,"Numeric 472 - char :is unknown mode char to me")
         elif incom[1] == '473':
             #debug(sock,"Numeric 474 - channel :Cannot join channel (+i)")
             if mysockets[sock]['identified'] == 'TRUE':
-                sts(sock,"PRIVMSG ChanServ :INVITE {0}".format(incom[3]))
+                sts(sock,f"PRIVMSG ChanServ :INVITE {incom[3]}")
                 joinchan(sock,rtnlower(incom[3]))
         elif incom[1] == '474':
             #debug(sock,"Numeric 474 - channel :Cannot join channel (+b)")
             if mysockets[sock]['identified'] == 'TRUE':
-                sts(sock,"PRIVMSG ChanServ :UNBAN {0}".format(incom[3]))
+                sts(sock,f"PRIVMSG ChanServ :UNBAN {incom[3]}")
                 joinchan(sock,rtnlower(incom[3]))
             elif mysockets[sock]['isoper'] == 'TRUE':
-                sts(sock,"SAJOIN {0} {1}".format(mysockets[sock]['nick'],incom[3]))
+                sts(sock,f"SAJOIN {mysockets[sock]['nick']} {incom[3]}")
             else:
-                blarg = 1
+                logger.debug("Numeric 471 - channel Ban Failure: %s", incom[2:])
         elif incom[1] == '475':
             #debug(sock,"Numeric 475 - channel :Cannot join channel (+k)")
             if mysockets[sock]['identified'] == 'TRUE':
-                sts(sock,"PRIVMSG ChanServ :INVITE {0}".format(incom[3]))
+                sts(sock,f"PRIVMSG ChanServ :INVITE {incom[3]}")
                 joinchan(sock,rtnlower(incom[3]))
             elif mysockets[sock]['isoper'] == 'TRUE':
-                sts(sock,"SAJOIN {0} {1}".format(mysockets[sock]['nick'],incom[3]))
+                sts(sock,f"SAJOIN {mysockets[sock]['nick']} {incom[3]}")
             else:
-                blarg = 1
+                logger.debug("Numeric 471 - channel Password Failure: %s", incom[2:])
 
         elif incom[1] == '477':
             debug(sock,"Numeric 477 - channel :You need a registered nick to join that channel.")
@@ -2243,8 +2263,7 @@ def parse_data(sock,data):
             debug(sock,"Numeric 491 - :No O-lines for your host")
 
         elif incom[1] == '499':
-            #debug(sock,"Numeric 499 - Not owner of the channel")
-            blarg = 1
+            logger.debug("Numeric 499 - Not owner of the channel: %s", incom[2:])
 
         elif incom[1] == '501':
             debug(sock,"Numeric 501 - :Unknown MODE flag")
@@ -2276,32 +2295,31 @@ def parse_data(sock,data):
             debug(sock,"Numeric 606 - :nicklist")
 
         elif incom[1] == '972':
-            #debug(sock,"Numeric 972 - Can't kick user due to +q")
-            blarg = 1
+            logger.debug("Numeric 972 - Can't kick user due to +q: %s", incom[2:])
 
         #start normal
         elif incom[1].upper() == 'JOIN':
             try:
                 mysockets[sock]['channels'][rtnlower(incom[2])]
-            except:
-                mysockets[sock]['channels'][rtnlower(incom[2])] = dict()
+            except KeyError:
+                mysockets[sock]['channels'][rtnlower(incom[2])]:dict = {}
             try:
                 mysockets[sock]['channels'][rtnlower(incom[2])]['users']
-            except:
-                mysockets[sock]['channels'][rtnlower(incom[2])]['users'] = dict()
+            except KeyError:
+                mysockets[sock]['channels'][rtnlower(incom[2])]['users']:dict = {}
             try:
                 mysockets[sock]['channels'][rtnlower(incom[2])]['users'][sender]
-            except:
-                mysockets[sock]['channels'][rtnlower(incom[2])]['users'][sender] = dict()
+            except KeyError:
+                mysockets[sock]['channels'][rtnlower(incom[2])]['users'][sender]:dict = {}
             mysockets[sock]['channels'][rtnlower(incom[2])]['users'][sender]['inchan'] = 'TRUE'
             if sender == mysockets[sock]['nick']:
                 if checkchan(sock,rtnlower(incom[2])) == 'FALSE':
-                    sts(sock,"PART {0} :Not supposed to be in here".format(incom[2]))
+                    sts(sock,f"PART {incom[2]} :Not supposed to be in here")
                 else:
-                    sts(sock,"MODE {0}".format(incom[2]))
-                    sts(sock,"MODE {0} +b".format(incom[2]))
-                    sts(sock,"MODE {0} +e".format(incom[2]))
-                    sts(sock,"MODE {0} +I".format(incom[2]))
+                    sts(sock,f"MODE {incom[2]}")
+                    sts(sock,f"MODE {incom[2]} +b")
+                    sts(sock,f"MODE {incom[2]} +e")
+                    sts(sock,f"MODE {incom[2]} +I")
             else:
                 #debug(sock,"{0} joined channel {1}".format(sender,incom[2]))
                 if islogged(sock,sender) == 'TRUE':
@@ -2329,7 +2347,7 @@ def parse_data(sock,data):
             else:
                 #Still gotta make the netsplit detection coding for here *.*.*.* iswm $1 $2
                 if islogged(sock,sender) == 'TRUE':
-                    botlog(sock,sender,'COMMON',"Auto-Logout for {0}({1})".format(sender,loggedin[sock][sender]['username']))
+                    botlog(sock,sender,'COMMON',f"Auto-Logout for {sender}({loggedin[sock][sender]['username']})")
                     del loggedin[sock][sender]
             if len(mysockets[sock]['channels']) > 0:
                 tmpckeys = mysockets[sock]['channels'].keys()
@@ -2368,8 +2386,8 @@ def parse_data(sock,data):
                                     tmpukeys = mysockets[sock]['channels'][tmpckey]['users'][sender].keys()
                                     try:
                                         mysockets[sock]['channels'][tmpckey]['users'][incom[2]]
-                                    except:
-                                        mysockets[sock]['channels'][tmpckey]['users'][incom[2]] = dict()
+                                    except KeyError:
+                                        mysockets[sock]['channels'][tmpckey]['users'][incom[2]]:dict = {}
                                     for tmpukey in tmpukeys:
                                         for tmpmode in tmpmodes:
                                             if tmpukey == tmpmode:
@@ -2381,7 +2399,7 @@ def parse_data(sock,data):
             else:
                 modeprocessor_chan(sock,rtnlower(incom[2]),incom[3:])
                 if chanmodes(sock,rtnlower(incom[2])) != 'NULL':
-                    sts(sock,"MODE {0} {1}".format(incom[2],chanmodes(sock,rtnlower(incom[2]))))
+                    sts(sock,f"MODE {incom[2]} {chanmodes(sock,rtnlower(incom[2]))}")
         elif incom[1].upper() == 'TOPIC':
             debug(sock,"TOPIC")
         elif incom[1].upper() == 'WALLOPS':
@@ -2402,9 +2420,10 @@ def parse_data(sock,data):
             debug(sock,incom)
             debug(sock,"Unknown feature at this momment")
     else:
-        debug(sock,"Unknown Lenght {0}".format(incom))
+        debug(sock,f"Unknown Lenght {incom}")
 
 def massmodes(sock,myuser,chan,modes):
+    # pylint: disable=unused-variable
     """
     Mass Modes
     """
@@ -2449,12 +2468,12 @@ def massmodes(sock,myuser,chan,modes):
         linnum = linnum + 1
         if linnum == modespl:
             output = output.rstrip()
-            sts(sock,"MODE {0} {1}{2} {3}".format(chan,omode,outputmode,output))
+            sts(sock,f"MODE {chan} {omode}{outputmode} {output}")
             output = ''
             linnum = 0
         i = i + 1
     output = output.rstrip()
-    sts(sock,"MODE {0} {1}{2} {3}".format(chan,omode,outputmode,output))
+    sts(sock,f"MODE {chan} {omode}{outputmode} {output}")
 
 def modeprocessor_chan(sock,chan,data):
     """
@@ -2462,8 +2481,8 @@ def modeprocessor_chan(sock,chan,data):
     """
     try:
         mysockets[sock]['channels'][chan]['modes']
-    except:
-        mysockets[sock]['channels'][chan]['modes'] = dict()
+    except KeyError:
+        mysockets[sock]['channels'][chan]['modes']:dict = {}
     i = 0
     pos = 1
     mode = 'SUB'
@@ -2509,14 +2528,14 @@ def modeprocessor_chan(sock,chan,data):
                     if tmpmode in ('FOP', 'SOP', 'OP', 'HOP', 'VOICE'):
                         try:
                             mysockets[sock]['channels'][chan]['users'][data[pos]]
-                        except:
-                            mysockets[sock]['channels'][chan]['users'][data[pos]] = dict()
+                        except KeyError:
+                            mysockets[sock]['channels'][chan]['users'][data[pos]]:dict = {}
                         mysockets[sock]['channels'][chan]['users'][data[pos]][tmpmode] = 'TRUE'
                     else:
                         try:
                             mysockets[sock]['channels'][chan][tmpmode]
-                        except:
-                            mysockets[sock]['channels'][chan][tmpmode] = dict()
+                        except KeyError:
+                            mysockets[sock]['channels'][chan][tmpmode]:dict = {}
                         if tmpmode in ('BAN', 'EXCEPT', 'INVEX'):
                             mysockets[sock]['channels'][chan][tmpmode][data[pos]] = 'TRUE'
                         else:
@@ -2525,22 +2544,22 @@ def modeprocessor_chan(sock,chan,data):
                 else:
                     try:
                         mysockets[sock]['channels'][chan]['modes']
-                    except:
-                        mysockets[sock]['channels'][chan]['modes'] = dict()
+                    except KeyError:
+                        mysockets[sock]['channels'][chan]['modes']:dict = {}
                     mysockets[sock]['channels'][chan]['modes'][tmpmode] = 'TRUE'
             if mode == 'SUB':
                 if tmpmode in ('FOP', 'SOP', 'OP', 'HOP', 'VOICE', 'EXCEPT', 'INVEX', 'BAN', 'LIMIT', 'LINK', 'BANLINK', 'CHANPASS', 'FLOOD', 'JOIN'):
                     if tmpmode in ('FOP', 'SOP', 'OP', 'HOP', 'VOICE'):
                         try:
                             mysockets[sock]['channels'][chan]['users'][data[pos]]
-                        except:
-                            mysockets[sock]['channels'][chan]['users'][data[pos]] = dict()
+                        except KeyError:
+                            mysockets[sock]['channels'][chan]['users'][data[pos]]:dict = {}
                         mysockets[sock]['channels'][chan]['users'][data[pos]][tmpmode] = 'FALSE'
                     else:
                         try:
                             mysockets[sock]['channels'][chan][tmpmode]
-                        except:
-                            mysockets[sock]['channels'][chan][tmpmode] = dict()
+                        except KeyError:
+                            mysockets[sock]['channels'][chan][tmpmode]:dict = {}
                         if tmpmode in ('BAN', 'EXCEPT', 'INVEX'):
                             del mysockets[sock]['channels'][chan][tmpmode][data[pos]]
                         else:
@@ -2549,8 +2568,8 @@ def modeprocessor_chan(sock,chan,data):
                 else:
                     try:
                         mysockets[sock]['channels'][chan]['modes']
-                    except:
-                        mysockets[sock]['channels'][chan]['modes'] = dict()
+                    except KeyError:
+                        mysockets[sock]['channels'][chan]['modes']:dict = {}
                     mysockets[sock]['channels'][chan]['modes'][tmpmode] = 'FALSE'
         i = i + 1
 
@@ -2571,14 +2590,14 @@ def modeprocessor_user(sock,imsgtype,data):
             if mode == 'ADD':
                 try:
                     mysockets[sock][imsgtype]
-                except:
-                    mysockets[sock][imsgtype] = dict()
+                except KeyError:
+                    mysockets[sock][imsgtype]:dict = {}
                 mysockets[sock][imsgtype][data[i]] = 'TRUE'
             if mode == 'SUB':
                 try:
                     mysockets[sock][imsgtype]
-                except:
-                    mysockets[sock][imsgtype] = dict()
+                except KeyError:
+                    mysockets[sock][imsgtype]:dict = {}
                 mysockets[sock][imsgtype][data[i]] = 'FALSE'
         i = i + 1
 
@@ -2594,7 +2613,7 @@ def pulluser(myuser):
     """
     Pull user from the database
     """
-    sql = "SELECT * FROM users WHERE username = '{0}'".format(myuser)
+    sql = f"SELECT * FROM users WHERE username = '{myuser}'"
     records = db.select(sql)
     if len(records) == 0:
         return 'FALSE'
@@ -2632,17 +2651,17 @@ def getwhois(sock,myuser,chan,mode,otheruser):
         tmpchanaccess = getchanaccess(sock,chan,userdata)
         tmpmsgtype = userdata['msgtype']
     if mode == 'WHOIS':
-        buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"Your Bot Whois on {0}".format(tmpuinfo))
-        buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"Nick(Username): {0} ({1})".format(tmpuinfo,tmpusername))
-        buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"Global: {0} Server: {1} Channel: {2}".format(wordaccess(tmpglobaccess),wordaccess(tmpservaccess),wordaccess(tmpchanaccess)))
-        buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"End of Your Bot Whois on {0}".format(tmpuinfo))
+        buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"Your Bot Whois on {tmpuinfo}")
+        buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"Nick(Username): {tmpuinfo} ({tmpusername})")
+        buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"Global: {wordaccess(tmpglobaccess)} Server: {wordaccess(tmpservaccess)} Channel: {wordaccess(tmpchanaccess)}")
+        buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"End of Your Bot Whois on {tmpuinfo}")
     if mode == 'WHOAMI':
         buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"Your Bot Whois")
-        buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"Nick(Username): {0} ({1})".format(tmpuinfo,tmpusername))
-        buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"Your Global Access: {0}".format(wordaccess(tmpglobaccess)))
-        buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"Your Server Access: {0}".format(wordaccess(tmpservaccess)))
-        buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"Your Channel Access: {0}".format(wordaccess(tmpchanaccess)))
-        buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"Your Current MsgType: {0}".format(tmpmsgtype))
+        buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"Nick(Username): {tmpuinfo} ({tmpusername})")
+        buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"Your Global Access: {wordaccess(tmpglobaccess)}")
+        buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"Your Server Access: {wordaccess(tmpservaccess)}")
+        buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"Your Channel Access: {wordaccess(tmpchanaccess)}")
+        buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"Your Current MsgType: {tmpmsgtype}")
         buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"End of Your Bot Whois")
 
 def islogged(sock,myuser):
@@ -2714,23 +2733,19 @@ def getaccess(sock,myuser,chan,datatype):
     userdata = pulluser(myuser)
     if userdata == 'FALSE':
         return 0
-    else:
-        tmpglobaccess = getglobaccess(userdata)
-        tmpservaccess = getservaccess(sock,userdata)
-        tmpchanaccess = getchanaccess(sock,chan,userdata)
-        if datatype == 'GLOBAL':
-            tmpaccess = tmpglobaccess
-        if datatype == 'SERVER':
-            tmpaccess = tmpglobaccess
-            if tmpaccess < tmpservaccess:
-                tmpaccess = tmpservaccess
-        if datatype == 'CHANNEL':
-            tmpaccess = tmpglobaccess
-            if tmpaccess < tmpservaccess:
-                tmpaccess = tmpservaccess
-            if tmpaccess < tmpchanaccess:
-                tmpaccess = tmpchanaccess
-        return int(tmpaccess)
+    tmpglobaccess = getglobaccess(userdata)
+    tmpservaccess = getservaccess(sock,userdata)
+    tmpchanaccess = getchanaccess(sock,chan,userdata)
+    if datatype == 'GLOBAL':
+        tmpaccess = tmpglobaccess
+    if datatype == 'SERVER':
+        tmpaccess = tmpglobaccess
+        tmpaccess = max(tmpaccess,tmpservaccess)
+    if datatype == 'CHANNEL':
+        tmpaccess = tmpglobaccess
+        tmpaccess = max(tmpaccess,tmpservaccess)
+        tmpaccess = max(tmpaccess,tmpchanaccess)
+    return int(tmpaccess)
 
 def loggedgetaccess(sock,myuser,chan,datatype):
     """
@@ -2738,35 +2753,34 @@ def loggedgetaccess(sock,myuser,chan,datatype):
     """
     if islogged(sock,myuser) == 'TRUE':
         return getaccess(sock,loggedin[sock][myuser]['username'],chan,datatype)
-    else:
-        return 0
+    return 0
 
-def botlog(sock,myuser,chan,text):
+def botlog(sock,myuser: str,chan: str,text: str):
     """
     Bot logging to the screen
     """
-    logger.info(f"BOTLOG: {mysockets[sock]['server']['servername']} {myuser} {chan} {text}")
+    logger.info("BOTLOG: %s %s %s %s",mysockets[sock]['server']['servername'],myuser,chan,text)
     #print ("BOTLOG: {0} {1} {2} {3}".format(mysockets[sock]['server']['servername'],myuser,chan,text))
 
-def debug(sock,text):
+def debug(sock,text: str):
     """
     Debug output to the screen
     """
     if sock == 'NULL':
-        logger.debug(f"{text}")
+        logger.debug(text)
         #print ("DEBUG: {0}".format(text))
     else:
-        logger.debug(f"{mysockets[sock]['server']['servername']} - {text}")
+        logger.debug("%s %s",mysockets[sock]['server']['servername'],text)
         #print ("DEBUG: {0} {1}".format(mysockets[sock]['server']['servername'],text))
 
-def screenoutput(sock,mode,text):
+def screenoutput(sock,mode: str,text: str):
     """
     Prettifing the output to the screen
     """
     if mode == 'in':
-        print ("-{0}-> {1}".format(sock,text))
+        print (f"-{sock}-> {text}")
     if mode == 'out':
-        print ("<-{0}- {1}".format(sock,text))
+        print (f"<-{sock}- {text}")
 
 def splitjoiner(data):
     """
@@ -2780,7 +2794,7 @@ def splitjoiner(data):
     output = output.rstrip()
     return output
 
-def buildmsg(sock,datatype,myuser,chan,uctype,message):
+def buildmsg(sock,datatype,myuser,chan: str,uctype: str,message: str):
     """
     Build the outgoing message for the bot
     """
@@ -2826,7 +2840,7 @@ def buildmsg(sock,datatype,myuser,chan,uctype,message):
             message = "You do not have access to read help on this command."
     else:
         mtoutput = "-(CBOT)-"
-    sts(sock,"{0} {1} :{2}4,1{3}{2} {4}".format(msgoutput,sendto,chr(3),mtoutput,message))
+    sts(sock,f"{msgoutput} {sendto} :{chr(3)}4,1{mtoutput}{chr(3)} {message}")
 
 def sts(sock,data):
     """
@@ -2834,7 +2848,7 @@ def sts(sock,data):
     """
     #mysocket[sock].send("{0}\n\r".format(data))
     #screenoutput(sock,'out',data)
-    queue[sock].append("{0}\n\r".format(data))
+    queue[sock].append(f"{data}\n\r")
 
 def run_timer(sock):
     """
@@ -2877,7 +2891,7 @@ def rtnlower(item):
     """
     return item.lower()
 
-def checkchan(sock,chan):
+def checkchan(sock,chan: str):
     """
     Check channels
     """
@@ -2886,11 +2900,11 @@ def checkchan(sock,chan):
         if channel == chan:
             if mysockets[sock]['chans'][channel]['enabled'] == 'enabled':
                 return 'TRUE'
-            else:
-                return 'FALSE'
+            return 'FALSE'
     return 'FALSE'
 
-def chanmodes(sock,chan):
+def chanmodes(sock,chan: str):
+    # pylint: disable=unused-variable
     """
     Channel modes
     """
@@ -2906,22 +2920,22 @@ def chanmodes(sock,chan):
                 try:
                     if mydata['FOP'] == 'TRUE':
                         isop = 'TRUE'
-                except:
+                except KeyError:
                     isop = 'FALSE'
                 try:
                     if mydata['SOP'] == 'TRUE':
                         isop = 'TRUE'
-                except:
+                except KeyError:
                     isop = 'FALSE'
                 try:
                     if mydata['OP'] == 'TRUE':
                         isop = 'TRUE'
-                except:
+                except KeyError:
                     isop = 'FALSE'
                 try:
                     if mysockets[sock]['isoper'] == 'TRUE':
                         isop = 'TRUE'
-                except:
+                except KeyError:
                     isop = 'FALSE'
                 if isop == 'TRUE':
                     data = tmpimodes.split(' ')
@@ -2974,15 +2988,12 @@ def chanmodes(sock,chan):
                         foutput = output+' '+output2
                         foutput = foutput.rstrip()
                         return foutput
-                    else:
-                        return 'NULL'
-                else:
                     return 'NULL'
-            else:
                 return 'NULL'
+            return 'NULL'
     return 'NULL'
 
-def joinchan(sock,chan):
+def joinchan(sock,chan: str):
     """
     Join channels
     """
@@ -2990,9 +3001,9 @@ def joinchan(sock,chan):
     for channel in channels:
         if channel == chan:
             if mysockets[sock]['chans'][channel]['chanpass'] == 'NULL':
-                sts(sock,"JOIN :{0}".format(channel))
+                sts(sock,f"JOIN :{channel}")
             else:
-                sts(sock,"JOIN :{0} {1}".format(channel,mysockets[sock]['chans'][channel]['chanpass']))
+                sts(sock,f"JOIN :{channel} {mysockets[sock]['chans'][channel]['chanpass']}")
 
 def autojoinchannels(sock):
     """
@@ -3008,10 +3019,10 @@ def operupcheck(sock):
     Oper check for the bot
     """
     if mysockets[sock]['server']['botoper'] != 'NULL':
-        sts(sock,"OPER {0} {1}".format(mysockets[sock]['server']['botoper'],mysockets[sock]['server']['botoperpass']))
+        sts(sock,f"OPER {mysockets[sock]['server']['botoper']} {mysockets[sock]['server']['botoperpass']}")
         mysockets[sock]['isoper'] = 'ATTEMPTING'
 
-def wordaccess(access):
+def wordaccess(access: int):
     """
     Process the number access value and change it to a word
     """
@@ -3049,16 +3060,16 @@ def rehash():
     for record in records:
         try:
             mysockets[sockcount]
-        except:
-            mysockets[sockcount] = dict()
+        except KeyError:
+            mysockets[sockcount]:dict = {}
         try:
             mysockets[sockcount]['server']
-        except:
-            mysockets[sockcount]['server'] = dict()
+        except KeyError:
+            mysockets[sockcount]['server']:dict = {}
         try:
             mysockets[sockcount]['connection']
-        except:
-            mysockets[sockcount]['connection'] = dict()
+        except KeyError:
+            mysockets[sockcount]['connection']:dict = {}
         #debug("NULL","{0} , {1} , {2} , {3} , {4} , {5} , {6} , {7} , {8} , {9} , {10} ".format(record[0],record[1],record[2],record[3],record[4],record[5],record[6],record[7],record[8],record[9],record[10]))
         #servers[record[0]] = {'id': int(record[0]), 'servername': record[1], 'address': record[2], 'serverport': int(record[3]), 'serverpass': record[4], 'nick': record[5], 'bnick': record[6], 'nickservpass': record[7], 'botoper': record[8], 'botoperpass': record[9], 'enabled': record[10]}
         mysockets[sockcount]['server']['id'] = int(record[0])
@@ -3083,12 +3094,12 @@ def rehash():
         #channels[record[0]] = {'id': int(record[0]), 'server': record[1], 'channel': record[2], 'chanpass': record[3], 'chanmodes': record[4], 'chantopic': record[5], 'options': record[6], 'enabled': record[7]}
         try:
             mysockets[int(record[1])]['chans']
-        except:
-            mysockets[int(record[1])]['chans'] = dict()
+        except KeyError:
+            mysockets[int(record[1])]['chans']:dict = {}
         try:
             mysockets[int(record[1])]['chans'][record[2]]
-        except:
-            mysockets[int(record[1])]['chans'][record[2]] = dict()
+        except KeyError:
+            mysockets[int(record[1])]['chans'][record[2]]:dict = {}
         mysockets[int(record[1])]['chans'][record[2]]['chanpass'] = record[3]
         mysockets[int(record[1])]['chans'][record[2]]['chanmodes'] = record[4]
         mysockets[int(record[1])]['chans'][record[2]]['chantopic'] = record[5]
@@ -3116,16 +3127,16 @@ def loaddata():
     for record in records:
         try:
             mysockets[sockcount]
-        except:
-            mysockets[sockcount] = dict()
+        except KeyError:
+            mysockets[sockcount]:dict = {}
         try:
             mysockets[sockcount]['server']
-        except:
-            mysockets[sockcount]['server'] = dict()
+        except KeyError:
+            mysockets[sockcount]['server']:dict = {}
         try:
             mysockets[sockcount]['connection']
-        except:
-            mysockets[sockcount]['connection'] = dict()
+        except KeyError:
+            mysockets[sockcount]['connection']:dict = {}
         #debug("NULL","{0} , {1} , {2} , {3} , {4} , {5} , {6} , {7} , {8} , {9} , {10} ".format(record[0],record[1],record[2],record[3],record[4],record[5],record[6],record[7],record[8],record[9],record[10]))
         #servers[record[0]] = {'id': int(record[0]), 'servername': record[1], 'address': record[2], 'serverport': int(record[3]), 'serverpass': record[4], 'nick': record[5], 'bnick': record[6], 'nickservpass': record[7], 'botoper': record[8], 'botoperpass': record[9], 'enabled': record[10]}
         mysockets[sockcount]['server']['id'] = int(record[0])
@@ -3150,12 +3161,12 @@ def loaddata():
         #channels[record[0]] = {'id': int(record[0]), 'server': record[1], 'channel': record[2], 'chanpass': record[3], 'chanmodes': record[4], 'chantopic': record[5], 'options': record[6], 'enabled': record[7]}
         try:
             mysockets[int(record[1])]['chans']
-        except:
-            mysockets[int(record[1])]['chans'] = dict()
+        except KeyError:
+            mysockets[int(record[1])]['chans']:dict = {}
         try:
             mysockets[int(record[1])]['chans'][record[2]]
-        except:
-            mysockets[int(record[1])]['chans'][record[2]] = dict()
+        except KeyError:
+            mysockets[int(record[1])]['chans'][record[2]]:dict = {}
         mysockets[int(record[1])]['chans'][record[2]]['chanpass'] = record[3]
         mysockets[int(record[1])]['chans'][record[2]]['chanmodes'] = record[4]
         mysockets[int(record[1])]['chans'][record[2]]['chantopic'] = record[5]
@@ -3173,7 +3184,7 @@ def doconnection(sock):
     """
     Create and start connection
     """
-    debug(sock,"Attempting to connect to {0}".format(mysockets[sock]['server']['servername']))
+    debug(sock,f"Attempting to connect to {mysockets[sock]['server']['servername']}")
     mysockets[sock]['lastcmd'] = ''
     if mysockets[sock]['server']['nickservpass'] != 'NULL':
         mysockets[sock]['identified'] = 'FALSE'
@@ -3186,31 +3197,31 @@ def doconnection(sock):
         mysocket[sock].connect((mysockets[sock]['connection']['address'], mysockets[sock]['connection']['serverport']))
         mysocket[sock].settimeout(0)
         if mysockets[sock]['server']['serverpass'] != 'NULL':
-            sts(sock,"PASS {0}".format(mysockets[sock]['server']['serverpass']))
-        sts(sock,"NICK {0}".format(mysockets[sock]['nick']))
-        sts(sock,"USER {0} 0 {2} :Ch3wyB0t Version {1}".format(settings['botname'],__version__,mysockets[sock]['server']['address']))
-    except:
+            sts(sock,f"PASS {mysockets[sock]['server']['serverpass']}")
+        sts(sock,f"NICK {mysockets[sock]['nick']}")
+        sts(sock,f"USER {settings['botname']} 0 {mysockets[sock]['server']['address']} :Ch3wyB0t Version {__version__}")
+    except socket.error:
         #del mysocket[sock]
         #del mysockets[sock]
-        debug(sock,"Connection Attempt Failed for {0}".format(mysockets[sock]['server']['servername']))
+        debug(sock,f"Connection Attempt Failed for {mysockets[sock]['server']['servername']}")
 
-def main ():
+def main () -> None:
     """
     Main process
     """
     if hasattr(os, 'fork'):
         attemptfork()
     tempsocks = mysockets.keys()
-    globtimer['data'] = dict()
+    globtimer['data']:dict = {}
     globtimer['lastcheck'] = time.time() - 10
     for tempsock in tempsocks:
-        mysockets[tempsock]['channels'] = dict()
+        mysockets[tempsock]['channels']:dict = {}
         queue[tempsock] = deque()
-        timer[tempsock] = dict()
+        timer[tempsock]:dict = {}
         lastqueue[tempsock] = time.time() - 10
         lasttimer[tempsock] = time.time() - 10
-        loggedin[tempsock] = dict()
-        tempdata[tempsock] = dict()
+        loggedin[tempsock]:dict = {}
+        tempdata[tempsock]:dict = {}
         mysockets[tempsock]['lastcmd'] = ''
         if mysockets[tempsock]['server']['nickservpass'] != 'NULL':
             mysockets[tempsock]['identified'] = 'FALSE'
@@ -3258,7 +3269,7 @@ def main ():
         time.sleep(0.5)
 
 # attemptfork is thanks to phenny irc bot (http://inamidst.com/phenny/)
-def attemptfork():
+def attemptfork() -> None:
     # pylint: disable=no-member
     # due to a precheck to see if fork is in os and not writing in linux
     """
@@ -3269,7 +3280,7 @@ def attemptfork():
         if pid > 0:
             sys.exit(0)
     except OSError:
-        debug('NULL','Could not daemonize process')
+        logger.debug('Could not daemonize process')
         #debug('NULL','Could not daemonize process: {0} ({1})'.format(e.errno, e.strerror))
     os.setsid()
     os.umask(0)
@@ -3278,18 +3289,21 @@ def attemptfork():
         if pid > 0:
             sys.exit(0)
     except OSError:
-        debug('NULL','Could not daemonize process')
+        logger.debug('Could not daemonize process')
         #debug('NULL','Could not daemonize process: {0} ({1})'.format(e.errno, e.strerror))
 
 if __name__ == '__main__':
     # This line of code should never really be hit, but it's here just in case
+    logger.info("Doing a check for python 3.x and above")
     if sys.version_info[0] < 3:
-        debug('NULL', "Bot failing due to old python version, needs python 3.x")
+        # pylint: disable=pointless-string-statement
+        """This section should only be accessable if the python version is below the required version """
+        logger.debug("Bot failing due to old python version, needs python 3.x")
+        logger.critical("Bot failing due to old python version, needs python 3.x")
         raise Exception("Must be using Python 3")
-        sys.exit(0)
-    debug('NULL',"Bot is starting, loading settings, servers, and channels")
+    logger.info("Bot is starting, loading settings, servers, and channels")
     loaddata()
-    debug("NULL","Bot finished loading settings, servers, and channels. Gonna attempt to start the bot up")
+    logger.info("Bot finished loading settings, servers, and channels. Gonna attempt to start the bot up")
     try:
         main()
     except KeyboardInterrupt:
