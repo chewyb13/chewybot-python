@@ -123,35 +123,26 @@ def mycommands(sock: int,imsgtype: str,myuser: str,incom,raw):
                 ctcp[stripcount] = ctcp[stripcount].strip('\x01')
             if ctcp[0].upper() == 'ACTION':
                 debug(sock,f"Got a Action {ctcp[1:]}")
-                # debug(sock,"Got a Action {0}".format(ctcp[1:]))
             elif ctcp[0].upper() == 'VERSION':
                 if len(ctcp) >= 2:
                     debug(sock,f"Got a CTCP VERSION Response {ctcp[1:]}")
-                    # debug(sock,"Got a CTCP VERSION Response {0}".format(ctcp[1:]))
                 else:
                     sts(sock,f"NOTICE {myuser} :\x01VERSION Ch3wyB0t Version {__version__}\x01")
-                    # sts(sock,"NOTICE {0} :\x01VERSION Ch3wyB0t Version {1}\x01".format(myuser,__version__))
             elif ctcp[0].upper() == 'PING':
                 if len(ctcp) >= 2:
                     sts(sock,f"NOTICE {myuser} :\x01PING {ctcp[1]}\x01")
-                    # sts(sock,"NOTICE {0} :\x01PING {1}\x01".format(myuser,ctcp[1]))
                 else:
                     sts(sock,f"NOTICE {myuser} :\x01PING\x01")
-                    # sts(sock,"NOTICE {0} :\x01PING\x01".format(myuser))
             elif ctcp[0].upper() == 'TIME':
                 if len(ctcp) >= 2:
                     debug(sock,f"Got a CTCP TIME response {ctcp[1:]}")
-                    # debug(sock,"Got a CTCP TIME response {0}".format(ctcp[1:]))
                 else:
                     currenttime = datetime.datetime.now()
                     sts(sock,f"NOTICE {myuser} :\x01TIME {currenttime.strftime('%a %b %d %I:%M:%S%p %Y')}\x01")
-                    # sts(sock,"NOTICE {0} :\x01TIME {1}\x01".format(myuser,currenttime.strftime("%a %b %d %I:%M:%S%p %Y")))
             else:
                 debug(sock,f"Got a unknown CTCP request {ctcp}")
-                # debug(sock,"Got a unknown CTCP request {0}".format(ctcp))
         elif incom[3] == '?trigger':
             buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"Channel: {settings['chancom']}{settings['signal']} Private Message: {settings['pvtcom']}{settings['signal']}")
-            # buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"Channel: {0}{2} Private Message: {1}{2}".format(settings['chancom'],settings['pvtcom'],settings['signal']))
         elif ((incom[3] == settings['chancom']+settings['signal']) and (imsgtype in ('CMSG', 'CNOTE'))) or ((incom[3] == settings['pvtcom']+settings['signal']) and (imsgtype in ('PMSG', 'PNOTE'))):
             if len(incom) >= 5:
                 if incom[4].upper() == 'EXIT':
@@ -162,24 +153,20 @@ def mycommands(sock: int,imsgtype: str,myuser: str,incom,raw):
                             for tempsock in tempsocks:
                                 mysockets[tempsock]['lastcmd'] = 'EXIT'
                                 sts(tempsock,f"QUIT {output}")
-                                # sts(tempsock,"QUIT {0}".format(output))
                         else:
                             tempsocks = mysockets.keys()
                             for tempsock in tempsocks:
                                 mysockets[tempsock]['lastcmd'] = 'EXIT'
                                 sts(tempsock,f"QUIT Ch3wyB0t Version {__version__} Quitting")
-                                # sts(tempsock,"QUIT Ch3wyB0t Version {0} Quitting".format(__version__))
                     else:
                         buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESS')
                 elif incom[4].upper() == 'RELOAD':
                     if loggedgetaccess(sock,myuser,chan,'GLOBAL') >= 6:
                         tempsocks = mysockets.keys()
                         debug('NULL',f"Value {tempsocks} value")
-                        # debug('NULL',"Value {0} value".format(tempsocks))
                         for tempsock in tempsocks:
                             mysockets[tempsock]['lastcmd'] = 'RELOAD'
                             sts(tempsock,f"QUIT Ch3wyB0t Version {__version__} Reloading")
-                            # sts(tempsock,"QUIT Ch3wyB0t Version {0} Reloading".format(__version__))
                     else:
                         buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESS')
                 elif incom[4].upper() == 'RAW':
@@ -187,9 +174,7 @@ def mycommands(sock: int,imsgtype: str,myuser: str,incom,raw):
                         if len(incom) >= 6:
                             output = splitjoiner(raw[5:])
                             sts(sock,f"{output}")
-                            # sts(sock,"{0}".format(output))
                             buildmsg(sock,'RAW',myuser,chan,'PRIV',f"Sent {output} to Server")
-                            # buildmsg(sock,'RAW',myuser,chan,'PRIV',"Sent {0} to Server".format(output))
                         else:
                             buildmsg(sock,'ERROR',myuser,chan,'PRIV',"You didn't enter what you want to send from the bot")
                     else:
@@ -200,7 +185,6 @@ def mycommands(sock: int,imsgtype: str,myuser: str,incom,raw):
                             output = splitjoiner(raw[5:])
                             db.execute(output)
                             buildmsg(sock,'RAW',myuser,chan,'PRIV',f"Sent {output} to the database")
-                            # buildmsg(sock,'RAW',myuser,chan,'PRIV',"Sent {0} to the database".format(output))
                         else:
                             buildmsg(sock,'ERROR',myuser,chan,'PRIV',"You didn't enter what you want to send to the database")
                     else:
@@ -210,11 +194,9 @@ def mycommands(sock: int,imsgtype: str,myuser: str,incom,raw):
                         if len(incom) >= 6:
                             mysockets[sock]['lastcmd'] = 'QUIT'
                             sts(sock,f"QUIT {splitjoiner(incom[5:])}")
-                            # sts(sock,"QUIT {0}".format(splitjoiner(incom[5:])))
                         else:
                             mysockets[sock]['lastcmd'] = 'QUIT'
                             sts(sock,f"QUIT Ch3wyB0t Version {__version__} Quitting")
-                            # sts(sock,"QUIT Ch3wyB0t Version {0} Quitting".format(__version__))
                     else:
                         buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESS')
                 elif incom[4].upper() == 'REHASH':
@@ -232,11 +214,9 @@ def mycommands(sock: int,imsgtype: str,myuser: str,incom,raw):
                                     if len(incom) >= 7:
                                         if len(incom) >= 8:
                                             sql = f"UPDATE settings SET setting = '{rtnlower(incom[6])}', value = '{incom[7]}' WHERE setting = '{rtnlower(incom[6])}'"
-                                            # sql = "UPDATE settings SET setting = '{0}', value = '{1}' WHERE setting = '{0}'".format(rtnlower(incom[6]),incom[7])
                                             db.execute(sql)
                                             settings[rtnlower(incom[6])] = incom[7]
                                             buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"You have successfully changed {rtnlower(incom[6])} to {incom[7]}")
-                                            # buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"You have successfully changed {0} to {1}".format(rtnlower(incom[6]),incom[7]))
                                         else:
                                             buildmsg(sock,'ERROR',myuser,chan,'PRIV',"Missing Setting Value")
                                     else:
@@ -246,7 +226,6 @@ def mycommands(sock: int,imsgtype: str,myuser: str,incom,raw):
                                     records = db.select(sql)
                                     for record in records:
                                         buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"Setting: {record[1]} Value: {record[2]}")
-                                        # buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"Setting: {0} Value: {1}".format(record[1], record[2]))
                                 else:
                                     buildmsg(sock,'ERROR',myuser,chan,'PRIV',"Error, Use Either Set or List")
                             else:
@@ -279,10 +258,8 @@ def mycommands(sock: int,imsgtype: str,myuser: str,incom,raw):
                                     for record in records:
                                         if record[10] == 'enabled':
                                             buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"\x033SID: {int(record[0])} Server: {record[1]} Address: {record[2]} Port: {int(record[3])} SPass: {record[4]} Nick: {record[5]} BNick: {record[6]} NSPass: {record[7]} BotOper: {record[8]} BotOperPass: {record[9]}\x03")
-                                            # buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"\x033SID: {0} Server: {1} Address: {2} Port: {3} SPass: {4} Nick: {5} BNick: {6} NSPass: {7} BotOper: {8} BotOperPass: {9}\x03".format(int(record[0]),record[1],record[2],int(record[3]),record[4],record[5],record[6],record[7],record[8],record[9]))
                                         else:
                                             buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"\x034SID: {int(record[0])} Server: {record[1]} Address: {record[2]} Port: {int(record[3])} SPass: {record[4]} Nick: {record[5]} BNick: {record[6]} NSPass: {record[7]} BotOper: {record[8]} BotOperPass: {record[9]}\x03")
-                                            # buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"\x034SID: {0} Server: {1} Address: {2} Port: {3} SPass: {4} Nick: {5} BNick: {6} NSPass: {7} BotOper: {8} BotOperPass: {9}\x03".format(int(record[0]),record[1],record[2],int(record[3]),record[4],record[5],record[6],record[7],record[8],record[9]))
                                     buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"Color \x033Green\x03 is enabled, Color \x034Red\x03 is disabled")
                                 else:
                                     buildmsg(sock,'ERROR',myuser,chan,'PRIV',"Error, Use Either List, Add, or Chg")
@@ -338,14 +315,10 @@ def mycommands(sock: int,imsgtype: str,myuser: str,incom,raw):
                                     for record in records:
                                         if record[7] == 'enabled':
                                             buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"\x033CID: {int(record[0])} Server: {record[1]} Channel: {record[2]} Pass: {record[3]} Channel Modes: {record[4]} Chan Options: {record[6]}\x03")
-                                            # buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"\x033CID: {0} Server: {1} Channel: {2} Pass: {3} Channel Modes: {4} Chan Options: {5}\x03".format(int(record[0]),record[1],record[2],record[3],record[4],record[6]))
                                             buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"\x033CID: {int(record[0])} Topic: {record[5]}\x03")
-                                            # buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"\x033CID: {0} Topic: {1}\x03".format(int(record[0]),record[5]))
                                         else:
                                             buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"\x034CID: {int(record[0])} Server: {record[1]} Channel: {record[2]} Pass: {record[3]} Channel Modes: {record[4]} Chan Options: {record[6]}\x03")
-                                            # buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"\x034CID: {0} Server: {1} Channel: {2} Pass: {3} Channel Modes: {4} Chan Options: {5}\x03".format(int(record[0]),record[1],record[2],record[3],record[4],record[6]))
                                             buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"\x034CID: {int(record[0])} Topic: {record[5]}\x03")
-                                            # buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"\x034CID: {0} Topic: {1}\x03".format(int(record[0]),record[5]))
                                     buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"Color \x033Green\x03 is enabled, Color \x034Red\x03 is disabled")
                                 else:
                                     buildmsg(sock,'ERROR',myuser,chan,'PRIV',"Error, Use Either List, or Chg")
@@ -366,10 +339,8 @@ def mycommands(sock: int,imsgtype: str,myuser: str,incom,raw):
                                             if tmpudata == 'FALSE':
                                                 tmppass = pwmaker(incom[7])
                                                 sql = "INSERT INTO users (username, password, global, server, channel, msgtype) VALUES ('{rtnlower(incom[6])}', '{tmppass.hexdigest()}', 'NULL', 'NULL', 'NULL', 'msg')"
-                                                # sql = "INSERT INTO users (username, password, global, server, channel, msgtype) VALUES ('{0}', '{1}', '{2}', '{3}', '{4}', '{5}')".format(rtnlower(incom[6]),tmppass.hexdigest(),'NULL','NULL','NULL','msg')
                                                 db.insert(sql)
                                                 buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"You have successfully created '{rtnlower(incom[6])}' with the password '{incom[7]}'")
-                                                # buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"You have successfully created '{0}' with the password '{1}'".format(rtnlower(incom[6]),incom[7]))
                                             else:
                                                 buildmsg(sock,'ERROR',myuser,chan,'PRIV',"The username you entered already exists")
                                         else:
@@ -383,10 +354,8 @@ def mycommands(sock: int,imsgtype: str,myuser: str,incom,raw):
                                                 if len(incom) >= 9:
                                                     tmppass = pwmaker(incom[8])
                                                     sql = f"UPDATE users SET password = '{tmppass.hexdigest()}' where username = '{incom[6]}'"
-                                                    # sql = "UPDATE users SET password = '{0}' where username = '{1}'".format(tmppass.hexdigest(),rtnlower(incom[6]))
                                                     db.execute(sql)
                                                     buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"You have successfully changed the password for '{rtnlower(incom[6])}'")
-                                                    # buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"You have successfully changed the password for '{0}'".format(rtnlower(incom[6])))
                                                 else:
                                                     buildmsg(sock,'ERROR',myuser,chan,'PRIV',"Error, Use format <username> PASS <newpass>")
                                             elif incom[7].upper() == 'MSGTYPE':
@@ -396,12 +365,10 @@ def mycommands(sock: int,imsgtype: str,myuser: str,incom,raw):
                                                     else:
                                                         newtype = 'msg'
                                                     sql = f"UPDATE users SET msgtype = '{newtype}' where username = '{rtnlower(incom[6])}'"
-                                                    # sql = "UPDATE users SET msgtype = '{0}' where username = '{1}'".format(newtype,rtnlower(incom[6]))
                                                     db.execute(sql)
                                                     if islogged(sock,rtnlower(incom[6])) == 'TRUE':
                                                         loggedin[sock][rtnlower(incom[6])]['msgtype'] = newtype
                                                     buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"You have successfully changed the message type for '{rtnlower(incom[6])}' to '{newtype}'")
-                                                    # buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"You have successfully changed the message type for '{0}' to '{1}'".format(rtnlower(incom[6]),newtype))
                                                 else:
                                                     buildmsg(sock,'ERROR',myuser,chan,'PRIV',"Error, Use format <username> MSGTYPE <notice/msg>")
                                             else:
@@ -413,16 +380,13 @@ def mycommands(sock: int,imsgtype: str,myuser: str,incom,raw):
                                 elif incom[5].upper() == 'DEL':
                                     #this bit of coding is only gonna be temperary for the time being due to abuse possiblities
                                     sql = f"DELETE FROM users WHERE username = '{rtnlower(incom[6])}'"
-                                    # sql = "DELETE FROM users WHERE username = '{0}'".format(rtnlower(incom[6]))
                                     db.execute(sql)
                                     buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"Deleted {rtnlower(incom[6])} or attempted to delete from the database")
-                                    # buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"Deleted {0} or attempted to delete from the database".format(rtnlower(incom[6])))
                                 elif incom[5].upper() == 'LIST':
                                     sql = "SELECT * FROM users"
                                     records = db.select(sql)
                                     for record in records:
                                         buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"UID: {int(record[0])} Username: {record[1]} Global: {record[3]} Server: {record[4]} Channel: {record[5]} MsgType: {record[6]}")
-                                        # buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"UID: {0} Username: {1} Global: {2} Server: {3} Channel: {4} MsgType: {5}".format(int(record[0]),record[1],record[3],record[4],record[5],record[6]))
                                 else:
                                     buildmsg(sock,'ERROR',myuser,chan,'PRIV',"Error, Use Either List, Add, Del, or Chg")
                             else:
@@ -440,7 +404,6 @@ def mycommands(sock: int,imsgtype: str,myuser: str,incom,raw):
                         buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"Displaying user list, only showing Usernames atm, do note may be a big ammount of infomation")
                         for record in records:
                             buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"Username: {record[1]}")
-                            # buildmsg(sock,'NORMAL',myuser,chan,'PRIV',"Username: {0}".format(record[1]))
                     else:
                         buildmsg(sock,'ERROR',myuser,chan,'PRIV','NOACCESS')
                 elif incom[4].upper() == 'MOWNER':
@@ -1216,8 +1179,6 @@ def mycommands(sock: int,imsgtype: str,myuser: str,incom,raw):
                                     if tmpudata == 'FALSE':
                                         tmppass = pwmaker(incom[6])
                                         sql = f"INSERT INTO users (username, password, global, server, channel, msgtype) VALUES ('{rtnlower(incom[5])}', '{tmppass.hexdigest()}', 'NULL', 'NULL', 'NULL', 'msg')"
-                                        db.insert(sql)
-                                        # sql = "INSERT INTO users (username, password, global, server, channel, msgtype) VALUES ('{0}', '{1}', '{2}', '{3}', '{4}', '{5}')".format(rtnlower(incom[5]),tmppass.hexdigest(),'NULL','NULL','NULL','msg')
                                         db.insert(sql)
                                         loggedin[sock][myuser] = {'username': rtnlower(incom[5]), 'msgtype': 'msg', 'umask': incom[0]}
                                         buildmsg(sock,'NORMAL',myuser,chan,'PRIV',f"You have successfully registered as {incom[5]} and have been auto logged-in")
